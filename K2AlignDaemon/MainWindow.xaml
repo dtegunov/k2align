@@ -1,0 +1,206 @@
+﻿<m:MetroWindow x:Class="K2AlignDaemon.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+        xmlns:s="clr-namespace:Sparta"
+        Title="K2 Alignment" Height="740" Width="400"
+        UseLayoutRounding="True" ShowTitleBar="True" SnapsToDevicePixels="False" TitlebarHeight="30" FontSize="13">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Colors.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Accents/BaseLight.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.AnimatedTabControl.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Color x:Key="HighlightDarkColor">#FFFFFFFF</Color>
+            <Color x:Key="HighlightLightColor">#FFFFFFFF</Color>
+            <Color x:Key="AccentDarkColor">#FFFFFFFF</Color>
+            <Color x:Key="AccentColor">#FF666666</Color>
+            <Color x:Key="AccentColor2">#FFFFFFFF</Color>
+            <Color x:Key="AccentColor3">#FFFFFFFF</Color>
+            <Color x:Key="AccentColor4">#FF000000</Color>
+            <SolidColorBrush x:Key="BrandingBrush" Color="{DynamicResource HighlightDarkColor}" />
+            <SolidColorBrush x:Key="AccentColorBrush" Color="{DynamicResource AccentColor}" />
+            <Style TargetType="s:ValueSlider">
+                <Setter Property="Foreground" Value="Black" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    <TabControl x:Name="TabsMain" Margin="4,4">
+        <TabItem Header="Mode">
+            <StackPanel Orientation="Vertical">
+                <RadioButton Name="ButtonModeFolder" Content="Process folder" HorizontalAlignment="Left" FontSize="30" Foreground="#FF666666" Margin="5,0,0,10" Checked="ButtonModeFolder_Checked" />
+                <RadioButton Name="ButtonModeDaemon" Content="On-the-fly" HorizontalAlignment="Left" FontSize="30" Foreground="#FF666666" Margin="5,0,0,0" Checked="ButtonModeDaemon_Checked" />
+            </StackPanel>
+        </TabItem>
+        <TabItem x:Name="TabOptions" Header="Options" Visibility="Hidden">
+            <Grid VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition Height="60" />
+                    <RowDefinition Height="8" />
+                </Grid.RowDefinitions>
+                <StackPanel Name="StackOptions" Orientation="Vertical" VerticalAlignment="Stretch">
+                    <Label Content="IO" FontSize="20" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <Label Content="Input data format:" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <RadioButton Name="RadioInFormatRaw" VerticalAlignment="Center" Content="RAW" Margin="0,0,10,0" IsChecked="{Binding Path=InFormatRaw, Mode=TwoWay}" Checked="RadioInFormatRaw_Checked" Unchecked="RadioInFormatRaw_Unchecked" />
+                            <RadioButton VerticalAlignment="Center" Content="EM" Margin="0,0,10,0" IsChecked="{Binding Path=InFormatEm, Mode=TwoWay}" />
+                            <RadioButton VerticalAlignment="Center" Content="MRC" IsChecked="{Binding Path=InFormatMrc, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Name="StackRawDims" Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Visibility="Collapsed">
+                            <s:ValueSlider Value="{Binding Path=RawWidth, Mode=TwoWay}" TextFormat="{}{0} x " MaxValue="16384" MinValue="1" UpdateTrigger="PropertyChanged" />
+                            <s:ValueSlider Value="{Binding Path=RawHeight, Mode=TwoWay}" TextFormat="{}{0} px, " MaxValue="16384" MinValue="1" UpdateTrigger="PropertyChanged" />
+                            <s:ValueSlider Value="{Binding Path=RawDepth, Mode=TwoWay}" TextFormat="{}{0} layers." MaxValue="999" MinValue="2" UpdateTrigger="PropertyChanged" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Height="5" />
+                    <Grid Panel.ZIndex="999">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Label Content="Output data format:" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <RadioButton GroupName="OutputFormat" VerticalAlignment="Center" Margin="0,0,10,0" Content="EM" IsChecked="{Binding Path=OutFormatEm, Mode=TwoWay}" />
+                            <Canvas Margin="0,4,0,0">
+                                <StackPanel Name="PanelMRCOptions" Background="Transparent" Canvas.Left="-4" Canvas.Top="-4" MouseEnter="PanelMRCOptions_MouseEnter" MouseLeave="PanelMRCOptions_MouseLeave">
+                                    <StackPanel.Effect>
+                                        <DropShadowEffect x:Name="ShadowMRCOptions" Color="Black" BlurRadius="0" ShadowDepth="0" />
+                                    </StackPanel.Effect>
+                                    <StackPanel Orientation="Vertical" Margin="4">
+                                        <StackPanel Name="PanelMRCOptionsFormat" Orientation="Horizontal">
+                                            <RadioButton GroupName="OutputFormat" VerticalAlignment="Center" Content="MRC" IsChecked="{Binding Path=OutFormatMrc, Mode=TwoWay}" />
+                                        </StackPanel>
+                                        <StackPanel Name="PanelMRCOptionsBits" Orientation="Vertical" Visibility="Collapsed">
+                                            <RadioButton GroupName="MRCOptions" VerticalAlignment="Center" Margin="0,3,0,0" Content="16 bit integer" IsChecked="{Binding Path=OutFormatMRC16bit, Mode=TwoWay}" />
+                                            <RadioButton GroupName="MRCOptions" VerticalAlignment="Center" Margin="0,3,0,0" Content="32 bit float" IsChecked="{Binding Path=OutFormatMRC32bit, Mode=TwoWay}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Canvas>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Height="5" />
+                    <Label Content="Output path:" />
+                    <Grid Margin="5,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="30" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox HorizontalAlignment="Stretch" Text="{Binding Path=OutputPath, Mode=TwoWay}" />
+                        <Button Name="ButtonOutputpath" Content="..." Grid.Column="1" Click="ButtonOutputpath_Click" />
+                    </Grid>
+                    <StackPanel Height="5" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Label Content="Original data transfer:" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <RadioButton Name="RadioArchive" VerticalAlignment="Center" Content="Zip and move" Margin="0,0,10,0" IsChecked="{Binding Path=ArchiveZip, Mode=TwoWay}" Checked="RadioArchiveZip_Checked" Unchecked="RadioArchiveZip_Unchecked" />
+                            <RadioButton VerticalAlignment="Center" Content="Keep" IsChecked="{Binding Path=ArchiveKeep, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Name="GridTransferPath" Margin="5,0,0,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="30" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox HorizontalAlignment="Stretch" Text="{Binding Path=ArchivePath, Mode=TwoWay}" />
+                        <Button Name="ButtonArchivepath" Content="..." Grid.Column="1" Click="ButtonArchivepath_Click" />
+                    </Grid>
+                    <StackPanel Height="5" />
+
+                    <Label Content="Pre-processing" FontSize="20" />
+                    <Grid Margin="5,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Name="CheckGain" Content="Correct gain" IsChecked="{Binding Path=CorrectGain, Mode=TwoWay}" Checked="CheckGain_Checked" Unchecked="CheckGain_Unchecked" />
+                        <Grid Grid.Column="1" Name="GridGainPath" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="30" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox HorizontalAlignment="Stretch" Text="{Binding Path=GainPath, Mode=TwoWay}" />
+                            <Button Name="ButtonGainpath" Content="..." Grid.Column="1" Click="ButtonGainpath_Click" /> 
+                        </Grid>
+                    </Grid>
+                    <StackPanel Height="5" />
+                    <CheckBox Margin="5,0,0,0" Content="Correct outlier pixels" IsChecked="{Binding Path=CorrectXray, Mode=TwoWay}" />
+                    <StackPanel Height="5" />
+                    <StackPanel Orientation="Horizontal">
+                        <s:ValueSlider Value="{Binding Path=BandpassLow, Mode=TwoWay}" TextFormat="Band-pass between {0} " MinValue="0" MaxValue="0.25" StepSize="0.001" />
+                        <s:ValueSlider Value="{Binding Path=BandpassHigh, Mode=TwoWay}" TextFormat="and {0} of Nyquist frequency." MinValue="0" MaxValue="0.25" StepSize="0.001" />
+                    </StackPanel>
+                    <StackPanel Height="5" />
+
+                    <Label Content="Frame ranges" FontSize="20" />
+                    <StackPanel Orientation="Horizontal" Margin="5,0,0,0" Panel.ZIndex="999">
+                        <s:ValueSlider Value="{Binding Path=ProcessFirst, Mode=TwoWay}" TextFormat="Process sub-frames {0}—" MinValue="1" MaxValue="{Binding Path=ProcessLast}" UpdateTrigger="PropertyChanged" />
+                        <s:ValueSlider Value="{Binding Path=ProcessLast, Mode=TwoWay}" TextFormat="{}{0}, write sub-frames " MinValue="{Binding Path=ProcessFirst}" MaxValue="999" UpdateTrigger="PropertyChanged" />
+                        <Canvas>
+                            <StackPanel Name="PanelOutputRanges" Background="Transparent" Canvas.Left="-4" Canvas.Top="-4" MouseEnter="PanelOutputRanges_MouseEnter" MouseLeave="PanelOutputRanges_MouseLeave">
+                                <StackPanel.Effect>
+                                    <DropShadowEffect x:Name="ShadowOutputRanges" Color="Black" BlurRadius="0" ShadowDepth="0" />
+                                </StackPanel.Effect>
+                                <StackPanel Orientation="Vertical" Margin="4">
+                                    <StackPanel Name="PanelOutputRangeSliders" Orientation="Horizontal">
+                                        <s:ValueSlider Value="{Binding Path=OutputFirst, Mode=TwoWay}" TextFormat="{}{0}—" MinValue="1" MaxValue="{Binding Path=OutputLast}" UpdateTrigger="PropertyChanged" />
+                                        <s:ValueSlider Value="{Binding Path=OutputLast, Mode=TwoWay}" TextFormat="{}{0} to output." MinValue="{Binding Path=OutputFirst}" MaxValue="999" UpdateTrigger="PropertyChanged" />
+                                    </StackPanel>
+                                    <StackPanel Name="PanelOutputRangeText" Orientation="Horizontal" Visibility="Collapsed">
+                                        <s:EditableTextBlock x:Name="TextOutputRanges" Text="{Binding Path=OutputRanges, Mode=TwoWay}" FontSize="12" Foreground="Black" VerticalAlignment="Bottom" />
+                                        <TextBlock Text=" to output." />
+                                    </StackPanel>
+                                    <Button Name="ButtonMoreOutputRanges" Content="More..." HorizontalAlignment="Left" Visibility="Collapsed" Style="{StaticResource ChromelessButtonStyle}" Click="ButtonMoreOutputRanges_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Canvas>
+                    </StackPanel>
+                    <StackPanel Height="5" />
+                    <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=AverageWindow, Mode=TwoWay}" TextFormat="Average {0} adjacent sub-frames to improve signal." MinValue="1" MaxValue="11" StepSize="2" UpdateTrigger="PropertyChanged" />
+                    <StackPanel Height="5" />
+                    <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=MaxDrift, Mode=TwoWay}" TextFormat="Discard sub-frames if drift is over {0} px." MinValue="0.1" MaxValue="1000" StepSize="0.1" UpdateTrigger="PropertyChanged" />
+                    <StackPanel Height="5" />
+                    <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=MinValidFrames, Mode=TwoWay}" TextFormat="Output should contain at least {0} sub-frames." MinValue="1" MaxValue="999" UpdateTrigger="PropertyChanged" />
+
+                    <Label Content="Quadrants" FontSize="20" />
+                    <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                        <s:ValueSlider Value="{Binding Path=QuadsX, Mode=TwoWay}" TextFormat="Partition into {0} x " MinValue="0" MaxValue="16384" UpdateTrigger="PropertyChanged" />
+                        <s:ValueSlider Value="{Binding Path=QuadsY, Mode=TwoWay}" TextFormat="{}{0} quadrants with " MinValue="0" MaxValue="16384" UpdateTrigger="PropertyChanged" />
+                        <s:ValueSlider Value="{Binding Path=QuadSize, Mode=TwoWay}" TextFormat="{}{0} px side length." MinValue="1" MaxValue="16384" UpdateTrigger="PropertyChanged" />
+                    </StackPanel>
+
+                    <Label Content="Post-processing" FontSize="20" />
+                    <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=OutputDownsample, Mode=TwoWay}" TextFormat="Downsample by a factor of {0}." MinValue="1" MaxValue="16384" />
+
+                    <StackPanel Name="PanelDelete" Orientation="Vertical" Visibility="Collapsed">
+                        <Label Content="Get rid of" FontSize="20" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Margin="5,0,0,0" Text="{Binding Path=DeletePatterns, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="150" />
+                            <TextBlock Text=" in " />
+                            <TextBox Margin="0,0,0,0" Text="{Binding Path=DeleteFolders, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="150" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>                
+                <Button Grid.Row="1" Name="ButtonProcess" Content="START" FontSize="30" Foreground="#FF086F9E" Style="{StaticResource ChromelessButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ButtonProcess_Click" />
+                <m:MetroProgressBar Grid.Row="2" x:Name="ProgressIndicator" Foreground="#FF086F9E" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Hidden" />
+            </Grid>
+        </TabItem>
+    </TabControl>
+</m:MetroWindow>

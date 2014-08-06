@@ -1,0 +1,38 @@
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.exe.config
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.exe
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.pdb
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.csprojResolveAssemblyReference.cache
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\MainWindow.baml
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\MainWindow.g.cs
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\App.g.cs
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon_MarkupCompile.cache
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.g.resources
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.Properties.Resources.resources
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.csproj.GenerateResource.Cache
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.exe
+c:\users\idim\documents\visual studio 2012\Projects\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.pdb
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.exe.config
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.exe
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.pdb
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.exe
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\K2AlignDaemon.pdb
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.csprojResolveAssemblyReference.cache
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\EditableTextBlock.baml
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\MainWindow.baml
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\EditableTextBlock.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\FormattedTextBlock.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\MainWindow.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\ValueSlider.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\App.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\GeneratedInternalTypeHelper.g.cs
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon_MarkupCompile.cache
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon_MarkupCompile.lref
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\FormattedTextBlock.baml
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\ValueSlider.baml
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.g.resources
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.Properties.Resources.resources
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Debug\K2AlignDaemon.csproj.GenerateResource.Cache
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\MahApps.Metro.dll
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\System.Windows.Interactivity.dll
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\MahApps.Metro.xml
+Z:\dimitry\K2AlignDaemon\K2AlignDaemon\bin\Debug\Ionic.Zip.dll
