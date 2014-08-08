@@ -227,9 +227,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			if(correctxray)
 				d_Xray(d_subframe, d_subframe, framedims);
 
-			/*d_Norm(d_subframe, d_subframe, Elements(framedims), (char*)NULL, T_NORM_MEAN01STD, 0);
-			d_HammingMask(d_subframe, d_subframe, framedims, NULL, NULL);*/
-
 			//Scale, filter and save frame's FFT to host memory
 			d_Scale(d_subframe, d_subframedownsampled, framedims, downsampleddims, T_INTERP_MODE::T_INTERP_FOURIER, NULL, &scaleplanback);
 			cudaStreamQuery(0);
@@ -241,8 +238,9 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 							(tfloat)min(framedims.x, framedims.y) * bandpasslow, 
 							(tfloat)min(framedims.x, framedims.y) * bandpasshigh,
 							0);
+			d_HammingMask(d_subframedownsampled, (tfloat*)d_subframeFFT, downsampleddims, NULL, NULL);
 
-			d_FFTR2C(d_subframedownsampled, d_subframeFFT, &downsampledforw);
+			d_FFTR2C((tfloat*)d_subframeFFT, d_subframeFFT, &downsampledforw);
 			cudaStreamQuery(0);
 			
 			tcomplex* h_subframeFFT = (tcomplex*)MallocPinnedFromDeviceArray(d_subframeFFT, ElementsFFT(downsampleddims) * sizeof(tcomplex));
@@ -266,6 +264,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 									toInt3(x * perquadshift.x + downsampleddims.x / 2,
 											y * perquadshift.y + downsampleddims.y / 2,
 											0));
+						d_HammingMask(d_quaddownsampled, d_quaddownsampled, downsampledquaddims, NULL, NULL);
 						d_FFTR2C(d_quaddownsampled, d_quadFFT, &quadforw);
 
 						tcomplex* h_quadFFT = (tcomplex*)MallocPinnedFromDeviceArray(d_quadFFT, ElementsFFT(downsampledquaddims) * sizeof(tcomplex));
@@ -431,8 +430,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	//Shift frames by previously computed values and add them to the final output
 	for(int n = max(firstframe, outputfirstframe); n <= min(n_subframes - 1, min(outputlastframe, n_subframes - 1)); n++)
 	{
-		if(exclude.count(n) > 0)
-			continue;
+		/*if(exclude.count(n) > 0)
+			continue;*/
 
 		tfloat drift = max(abs(subframetranslations[n].x), abs(subframetranslations[n].y));
 		if(n < n_subframes - 1)

@@ -92,4 +92,74 @@ namespace K2AlignDaemon
             return ((ulong)position.Z * (ulong)Y + (ulong)position.Y) * (ulong)X + (ulong)position.X;
         }
     }
+
+    public static class IOHelper
+    {
+        public static int3 GetEMDimensions(string path)
+        {
+            int3 Dims = new int3(1, 1, 1);
+
+            using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
+            {
+                byte[] Buffer = Reader.ReadBytes(512);
+                unsafe
+                {
+                    fixed (byte* BufferPtr = Buffer)
+                    {
+                        Dims.X = ((int*)BufferPtr)[1];
+                        Dims.Y = ((int*)BufferPtr)[2];
+                        Dims.Z = ((int*)BufferPtr)[3];
+                    }
+                }
+            }
+
+            return Dims;
+        }
+
+        public static float[] ReadEMfloat(string path)
+        {
+            int3 Dims = GetEMDimensions(path);
+            float[] Data = new float[Dims.Elements()];
+
+            using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
+            {
+                Reader.ReadBytes(512);
+                byte[] Buffer = Reader.ReadBytes((int)Data.Length * sizeof(float));
+                unsafe
+                {
+                    fixed (byte* BufferPtr = Buffer)
+                    fixed (float* DataPtr = Data)
+                    {
+                        float* BufferP = (float*)BufferPtr;
+                        float* DataP = DataPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = *BufferP++;
+                    }
+                }
+            }
+
+            return Data;
+        }
+
+        public static int3 GetMRCDimensions(string path)
+        {
+            int3 Dims = new int3(1, 1, 1);
+
+            using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
+            {
+                byte[] Buffer = Reader.ReadBytes(512);
+                unsafe
+                {
+                    fixed (byte* BufferPtr = Buffer)
+                    {
+                        Dims.X = ((int*)BufferPtr)[0];
+                        Dims.Y = ((int*)BufferPtr)[1];
+                        Dims.Z = ((int*)BufferPtr)[2];
+                    }
+                }
+            }
+
+            return Dims;
+        }
+    }
 }
