@@ -22,13 +22,6 @@ build/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
-*.pdb
-*.exe
-*.[Cc]ache
-*.lib
-*.ilk
-*.exp
-
 *_i.c
 *_p.c
 *.ilk
@@ -164,3 +157,8 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+*.dll
+*.exp
+*.lib
+*.exe
+*.cache
