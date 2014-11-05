@@ -1,4 +1,4 @@
-#include "../../GTOM/include/GTOM.cuh"
+#include "../../gtom/include/GTOM.cuh"
 
 #include <stdlib.h>
 #include <stdio.h>
