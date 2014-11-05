@@ -73,3 +73,6 @@ U:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Release\ValueSlider.baml
 U:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Release\K2AlignDaemon.g.resources
 U:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Release\K2AlignDaemon.Properties.Resources.resources
 U:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Release\K2AlignDaemon.csproj.GenerateResource.Cache
+C:\Dev\k2aligndaemon\K2AlignDaemon.exe.config
+C:\Dev\k2aligndaemon\K2AlignDaemon\obj\Release\K2AlignDaemon.exe
+C:\Dev\k2aligndaemon\K2AlignDaemon\obj\Release\K2AlignDaemon.pdb

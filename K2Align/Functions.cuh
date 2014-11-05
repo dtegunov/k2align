@@ -1,5 +1,4 @@
-#include "../../GTOM/Prerequisites.cuh"
-#include "../../GTOM/Functions.cuh"
+#include "../../GTOM/include/GTOM.cuh"
 
 #include <stdlib.h>
 #include <stdio.h>

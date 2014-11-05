@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-Z:\dimitry\K2AlignDaemon\K2AlignDaemon\obj\Release\
+C:\Dev\k2aligndaemon\K2AlignDaemon\obj\Release\
 K2AlignDaemon
 none
 false
 TRACE
-Z:\dimitry\K2AlignDaemon\K2AlignDaemon\App.xaml
+C:\Dev\k2aligndaemon\K2AlignDaemon\App.xaml
 4971343259
 
-181744196561
-17-1256018233
+18655397728
+1731359744
 EditableTextBlock.xaml;FormattedTextBlock.xaml;MainWindow.xaml;ValueSlider.xaml;
 
-False
+True
 

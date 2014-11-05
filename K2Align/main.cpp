@@ -430,8 +430,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	//Shift frames by previously computed values and add them to the final output
 	for(int n = max(firstframe, outputfirstframe); n <= min(n_subframes - 1, min(outputlastframe, n_subframes - 1)); n++)
 	{
-		/*if(exclude.count(n) > 0)
-			continue;*/
+		if(exclude.count(n) > 0)
+			continue;
 
 		tfloat drift = max(abs(subframetranslations[n].x), abs(subframetranslations[n].y));
 		if(n < n_subframes - 1)

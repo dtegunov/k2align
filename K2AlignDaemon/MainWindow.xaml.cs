@@ -877,7 +877,7 @@ namespace K2AlignDaemon
                                     //Unless it still has to be zipped.
                                     try
                                     {
-                                        if (SavedTemporary && !Options.ArchiveZip)
+                                        if ((SavedTemporary || Info.FullName.ToLower().Contains("temp")) && !Options.ArchiveZip)
                                         {
                                             File.Delete(Info.FullName);
                                             Info = new FileInfo(Filename);
