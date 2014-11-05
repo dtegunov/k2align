@@ -1133,7 +1133,7 @@ namespace K2AlignDaemon
 
                                                 try
                                                 {
-                                                    if (SavedTemporary || Info.FullName.ToLower().Contains("temp"))
+                                                    if (SavedTemporary)
                                                         File.Delete(Info.FullName);
                                                 }
                                                 catch { }
