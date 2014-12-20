@@ -1,5 +1,3 @@
-#include "../../GTOM/Prerequisites.cuh"
-#include "../../GTOM/Functions.cuh"
 #include "Functions.cuh"
 #include "tinydir.h"
 #include <omp.h>

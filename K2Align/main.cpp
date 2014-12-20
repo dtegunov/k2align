@@ -137,7 +137,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			char* h_subframe;
 
 			if(subframeformat == "mrc")
-				ReadMRC(subframepaths[0], (void**)&h_subframe, subframetype, s);			
+				ReadMRC(subframepaths[0], (void**)&h_subframe, subframetype, s);
 			else if(subframeformat == "em")
 				ReadEM(subframepaths[0], (void**)&h_subframe, subframetype, s);
 			else if(subframeformat == "dat")
@@ -317,8 +317,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 							cudaMemcpy(h_translation, d_translation, sizeof(tfloat3), cudaMemcpyDeviceToHost);
 
 							relativetranslation = tfloat3(h_translation[0].x - (tfloat)(downsampledquaddims.x / 2),
-															h_translation[0].y - (tfloat)(downsampledquaddims.y / 2),
-															(tfloat)0);
+														  h_translation[0].y - (tfloat)(downsampledquaddims.y / 2),
+														  (tfloat)0);
 							h_translations[(globalsubframeoffset + s1) * n_subframes + s2] = relativetranslation;
 							h_translations[(globalsubframeoffset + s2) * n_subframes + s1] = tfloat3(-relativetranslation.x, -relativetranslation.y, (tfloat)0);
 						}
@@ -411,18 +411,18 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 								0);
 
 	//Allocate resources for shifting frames and summing them up
-	tfloat* d_average = (tfloat*)CudaMallocValueFilled(Elements(framedims) * numberoutputranges, (tfloat)0);
-	tfloat* d_quadaverages = (tfloat*)CudaMallocValueFilled(max(Elements(quaddims) * Elements(quadnum), 1) * numberoutputranges, (tfloat)0);
+	tfloat* d_average = (tfloat*)CudaMallocValueFilled(Elements(outputframedims) * numberoutputranges, (tfloat)0);
+	tfloat* d_quadaverages = (tfloat*)CudaMallocValueFilled(max(Elements(outputquaddims) * Elements(quadnum), 1) * numberoutputranges, (tfloat)0);
 	tcomplex* d_shiftintermediate;
 	cudaMalloc((void**)&d_shiftintermediate, ElementsFFT(framedims) * sizeof(tcomplex));
-	cufftHandle shiftplanforw = d_FFTR2CGetPlan(2, framedims);
-	cufftHandle shiftplanback = d_IFFTC2RGetPlan(2, framedims);
-	cufftHandle shiftquadplanforw = d_FFTR2CGetPlan(2, quaddims);
-	cufftHandle shiftquadplanback = d_IFFTC2RGetPlan(2, quaddims);
+	cufftHandle planforw = d_FFTR2CGetPlan(2, framedims);
+	cufftHandle planback = d_IFFTC2RGetPlan(2, outputframedims);
+	cufftHandle planquadforw = d_FFTR2CGetPlan(2, quaddims);
+	cufftHandle planquadback = d_IFFTC2RGetPlan(2, outputquaddims);
 	tfloat* d_subframe;
-	cudaMalloc((void**)&d_subframe, Elements(framedims) * sizeof(tfloat));
+	cudaMalloc((void**)&d_subframe, ElementsFFT(framedims) * sizeof(tcomplex));
 	tfloat* d_quad;
-	cudaMalloc((void**)&d_quad, Elements(quaddims) * sizeof(tfloat));
+	cudaMalloc((void**)&d_quad, ElementsFFT(quaddims) * sizeof(tcomplex));
 			
 	int framesvalid = 0;
 	int alignto = outputfirstframe + (min(outputlastframe, n_subframes - 1) - outputfirstframe) / 2;
@@ -477,8 +477,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 					translationquads[q].y -= subframetranslations[(1 + q) * n_subframes + s].y;
 				}
 			
-			translationquads[q].x *= (tfloat)downsamplefactor;
-			translationquads[q].y *= (tfloat)downsamplefactor;
+			translationquads[q].x *= downsamplefactor;
+			translationquads[q].y *= downsamplefactor;
 		}
 
 		MixedToDeviceTfloat(h_subframes[n], d_subframe, subframetype, Elements(framedims));
@@ -492,48 +492,49 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			for (int y = 0; y < quadnum.y; y++)
 				for (int x = 0; x < quadnum.x; x++)
 				{
-					tfloat3 globalshift = tfloat3((tfloat)(x * perquadshift.x + quaddims.x / 2),// + translationquads[y * quadnum.x + x].x,
-													(tfloat)(y * perquadshift.y + quaddims.y / 2),// + translationquads[y * quadnum.x + x].y,
-													(tfloat)0);
 					tfloat3 localshift = tfloat3(translationquads[y * quadnum.x + x].x,
 													translationquads[y * quadnum.x + x].y,
 													(tfloat)0);
 
 					d_Extract(d_subframe, 
-								d_quad, 
-								framedims, 
-								quaddims, 
-								toInt3(x * perquadshift.x + quaddims.x / 2,
-										y * perquadshift.y + quaddims.y / 2,
-										0));
-					d_Shift(d_quad, 
-							d_quad, 
+							  d_quad, 
+							  framedims, 
+							  quaddims, 
+							  toInt3(x * perquadshift.x + quaddims.x / 2,
+									 y * perquadshift.y + quaddims.y / 2,
+									 0));
+					d_FFTR2C(d_quad, (tcomplex*)d_quad, &planquadforw);
+					d_Shift((tcomplex*)d_quad, 
+							(tcomplex*)d_quad, 
 							quaddims, 
-							&localshift,
-							&shiftquadplanforw,
-							&shiftquadplanback,
-							d_shiftintermediate);
+							&localshift);
+					if (outputdownsamplefactor > 1)
+						d_FFTCrop((tcomplex*)d_quad, (tcomplex*)d_quad, quaddims, outputquaddims);
+					d_IFFTC2R((tcomplex*)d_quad, d_quad, &planquadback);
 					
 					for (int r = 0; r < numberoutputranges; r++)
 					{
 						if(n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
-							d_AddVector(d_quadaverages + Elements(quaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(quaddims),
+							d_AddVector(d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(outputquaddims),
 										d_quad,
-										d_quadaverages + Elements(quaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(quaddims),
-										Elements(quaddims));
+										d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(outputquaddims),
+										Elements(outputquaddims));
 					}
 				}
 
 		//Shift whole subframe and add to average
 		if(dowholeframe)
 		{
-			if(n != alignto)
-				d_Shift(d_subframe, d_subframe, framedims, &translation, &shiftplanforw, &shiftplanback, d_shiftintermediate);
+			d_FFTR2C(d_subframe, (tcomplex*)d_subframe, &planforw);
+			d_Shift((tcomplex*)d_subframe, (tcomplex*)d_subframe, framedims, &translation);
+			if (outputdownsamplefactor > 1)
+				d_FFTCrop((tcomplex*)d_subframe, (tcomplex*)d_subframe, framedims, outputframedims);
+			d_IFFTC2R((tcomplex*)d_subframe, d_subframe, &planback);
 
 			for (int r = 0; r < numberoutputranges; r++)
 			{
 				if(n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
-					d_AddVector(d_average + Elements(framedims) * r, d_subframe, d_average + Elements(framedims) * r, Elements(framedims));
+					d_AddVector(d_average + Elements(outputframedims) * r, d_subframe, d_average + Elements(outputframedims) * r, Elements(outputframedims));
 			}
 		}
 
@@ -543,10 +544,10 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	//Clean up resources for shift & sum
 	cudaFree(d_quad);
 	cudaFree(d_subframe);
-	cufftDestroy(shiftplanforw);
-	cufftDestroy(shiftplanback);
-	cufftDestroy(shiftquadplanforw);
-	cufftDestroy(shiftquadplanback);
+	cufftDestroy(planforw);
+	cufftDestroy(planback);
+	cufftDestroy(planquadforw);
+	cufftDestroy(planquadback);
 	cudaFree(d_shiftintermediate);
 
 	//Make final corrections and write log file
@@ -555,12 +556,10 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		cudaMalloc((void**)&d_stats, sizeof(imgstats5));
 		imgstats5 h_stats;
 				
-		//In case outliers have become more prominent after summation, get rid of them
+		//In case outliers became more prominent after summation, get rid of them
 		for (int r = 0; r < numberoutputranges; r++)
 			if(correctxray)
-			{
 				d_Xray(d_average + Elements(framedims) * r, d_average + Elements(framedims) * r, framedims);
-			}
 
 		//Get image statistics
 		d_Dev(d_average, d_stats, Elements(framedims), (char*)NULL);
@@ -619,22 +618,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 	free(subframetranslations);
 	free(errorstddev);
-
-	//Downsample output
-	if(outputdownsamplefactor > (tfloat)1)
-	{
-		for (int r = 0; r < numberoutputranges; r++)
-		{
-			if(dowholeframe)
-				d_Scale(d_average + Elements(framedims) * r, d_average + Elements(outputframedims) * r, framedims, outputframedims, T_INTERP_MODE::T_INTERP_FOURIER);
-
-			if(doquads)
-			{
-				for (int q = 0; q < Elements(quadnum); q++)
-					d_Scale(d_quadaverages + Elements(quaddims) * Elements(quadnum) * r + q * Elements(quaddims), d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + q * Elements(outputquaddims), quaddims, outputquaddims, T_INTERP_MODE::T_INTERP_FOURIER);
-			}
-		}
-	}
 			
 	cudaMemcpy(h_outputwhole, d_average, Elements(outputframedims) * numberoutputranges * sizeof(tfloat), cudaMemcpyDeviceToHost);
 	cudaFree(d_average);

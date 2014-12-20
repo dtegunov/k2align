@@ -1,5 +1,3 @@
-#include "../../GTOM/Prerequisites.cuh"
-#include "../../GTOM/Functions.cuh"
 #include "Functions.cuh"
 
 tfloat Mean(tfloat* h_input, size_t elements)
