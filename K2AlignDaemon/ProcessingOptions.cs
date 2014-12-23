@@ -422,6 +422,13 @@ namespace K2AlignDaemon
             get { return _DeleteFolders; }
             set { if (value != _DeleteFolders) { _DeleteFolders = value; OnPropertyChanged(); } }
         }
+
+        private bool _OutputStack = false;
+        public bool OutputStack
+        {
+            get { return _OutputStack; }
+            set { if (value != _OutputStack) { _OutputStack = value; OnPropertyChanged(); } }
+        }
         
         public void TryFindMask()
         { 

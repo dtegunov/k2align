@@ -20,6 +20,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 												 int outputdownsamplefactor,
 												 int3 quaddims,
 												 int3 quadnum,
+												 bool outputstack,
+												 char* c_outputstackname,
 												 bool* iscorrupt,
 												 char* c_logpath)
 {
@@ -29,8 +31,9 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	string imagepath(c_imagepath);
 	string subframeformat(c_subframeformat);
 	string logpath(c_logpath);
+	string outputstackname(c_outputstackname);
 
-	tfloat downsamplefactor = (tfloat)4;
+	tfloat downsamplefactor = (tfloat)floor(0.5f / bandpasshigh + 0.01f);
 
 	bool doquads = true;
 	bool dowholeframe = true;
@@ -64,14 +67,26 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	int n_subframes = 0;
 	
 	int3 framedims;
+	int subframetype;
 
-	//Read dimensions of the current stack, fit the gain mask if needed
-	if(subframeformat == "mrc")
-		ReadMRCDims(subframepaths[0], framedims);
-	else if(subframeformat == "em")
-		ReadEMDims(subframepaths[0], framedims);
-	else if(subframeformat == "dat")
+	//Read header, store dimensions and data type
+	if (subframeformat == "mrc")
+	{
+		HeaderMRC header = ReadMRCHeader(subframepaths[0]);
+		framedims = header.dimensions;
+		subframetype = (int)header.mode;
+	}
+	else if (subframeformat == "em")
+	{
+		HeaderEM header = ReadEMHeader(subframepaths[0]);
+		framedims = header.dimensions;
+		subframetype = (int)header.mode;
+	}
+	else if (subframeformat == "dat")
+	{
 		framedims = toInt3(rawdims.x, rawdims.y, rawdims.z);
+		subframetype = rawdatatype;
+	}
 	else
 		throw;
 
@@ -90,9 +105,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 	//Allocate array of pointers to pre-processed data used for cross-correlation
 	void** h_subframes = (void**)malloc(n_subframes * sizeof(void*));
-	EM_DATATYPE subframetype;
-	if(subframeformat == "dat")
-		subframetype = (EM_DATATYPE)rawdatatype;
 	tcomplex** h_subframeFFTs = (tcomplex**)malloc(n_subframes * (1 + Elements(quadnum)) * sizeof(tcomplex*));
 
 	int3 downsampleddims;
@@ -137,11 +149,11 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			char* h_subframe;
 
 			if(subframeformat == "mrc")
-				ReadMRC(subframepaths[0], (void**)&h_subframe, subframetype, s);
+				ReadMRC(subframepaths[0], (void**)&h_subframe, (MRC_DATATYPE)subframetype, s);
 			else if(subframeformat == "em")
-				ReadEM(subframepaths[0], (void**)&h_subframe, subframetype, s);
+				ReadEM(subframepaths[0], (void**)&h_subframe, (EM_DATATYPE)subframetype, s);
 			else if(subframeformat == "dat")
-				ReadRAW(subframepaths[0], (void**)&h_subframe, (EM_DATATYPE)rawdatatype, framedims, s);
+				ReadRAW(subframepaths[0], (void**)&h_subframe, (EM_DATATYPE)rawdatatype, framedims, 0, s);
 
 			h_subframes[s] = h_subframe;
 
@@ -167,24 +179,16 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			cudaMalloc((void**)(d_quadFFTs + q), ElementsFFT(downsampledquaddims) * sizeof(tcomplex));
 
 		cufftHandle scaleplanforw = d_FFTR2CGetPlan(2, framedims);
-		cufftHandle scaleplanback = d_IFFTC2CGetPlan(2, downsampleddims);
+		cufftHandle scaleplanback = d_IFFTC2RGetPlan(2, downsampleddims);
 		cufftHandle downsampledforw = d_FFTR2CGetPlan(2, downsampleddims);
 		cufftHandle quadforw = d_FFTR2CGetPlan(2, downsampledquaddims);
 							
 		//Allocate resources for frame cross-correlation
-		tfloat maskradius = (tfloat)10;
+		int3 dimspeak = toInt3(max(32, 128 / downsamplefactor), max(32, 128 / downsamplefactor), 1);
 		tcomplex* d_inputFFT1;
 		cudaMalloc((void**)&d_inputFFT1, ElementsFFT(downsampleddims) * sizeof(tcomplex));
 		tfloat* d_correlation;
 		cudaMalloc((void**)&d_correlation, Elements(downsampleddims) * sizeof(tfloat));
-		tfloat* d_correlationmask = CudaMallocValueFilled(Elements(downsampleddims), (tfloat)1);
-		d_SphereMask(d_correlationmask, d_correlationmask, downsampleddims, &maskradius, (tfloat)0, (tfloat3*)NULL);
-		tfloat* d_correlationquadmask = CudaMallocValueFilled(Elements(downsampleddims), (tfloat)1);
-		d_SphereMask(d_correlationquadmask, d_correlationquadmask, downsampledquaddims, &maskradius, (tfloat)0, (tfloat3*)NULL);
-		tfloat* d_quadcorrelationmask = CudaMallocValueFilled(Elements(downsampledquaddims), (tfloat)1);
-		d_SphereMask(d_quadcorrelationmask, d_quadcorrelationmask, downsampledquaddims, &maskradius, (tfloat)0, (tfloat3*)NULL);
-		tfloat* d_correlationshifted;
-		cudaMalloc((void**)&d_correlationshifted, Elements(downsampleddims) * sizeof(tfloat));
 		tfloat3* d_translation;
 		cudaMalloc((void**)&d_translation, sizeof(tfloat3));
 		tfloat3* h_translation = (tfloat3*)malloc(sizeof(tfloat3));
@@ -193,6 +197,9 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				
 		cufftHandle corrplanback = d_IFFTC2RGetPlan(2, downsampleddims);
 		cufftHandle corrquadplanback = d_IFFTC2RGetPlan(2, downsampledquaddims);
+		cufftHandle peakplanforw = -1;
+		cufftHandle peakplanback = -1;
+		d_PeakMakePlans(dimspeak, T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
 
 		int3 perquadshift = toInt3(quadnum.x > 0 ? downsampledquaddims.x - (downsampledquaddims.x * quadnum.x - downsampleddims.x) / (quadnum.x - 1) : 0,
 									quadnum.y > 0 ? downsampledquaddims.y - (downsampledquaddims.y * quadnum.y - downsampleddims.y) / (quadnum.y - 1) : 0,
@@ -205,18 +212,31 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 					
 			//Moving window average
-			d_ValueFill(d_subframe, Elements(framedims), (tfloat)0);
-			for(int ss = max(s - averageextent, 0); ss <= min(s + averageextent, n_subframes - 1); ss++)
+			if (averageextent >= 0)
 			{
-				MixedToDeviceTfloat(h_subframes[ss], d_subframetemp, subframetype, Elements(framedims));
-				if(d_HasZeroRects(d_subframetemp, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframetemp, framedims, toInt3(20, 100, 1)))
+				d_ValueFill(d_subframe, Elements(framedims), (tfloat)0);
+				for (int ss = max(s - averageextent, 0); ss <= min(s + averageextent, n_subframes - 1); ss++)
 				{
-					*iscorrupt = true;
-					if(exclude.count(ss) == 0)
-						exclude.insert(ss);
+					if (subframeformat == "mrc")
+						MixedToDeviceTfloat(h_subframes[ss], d_subframetemp, (MRC_DATATYPE)subframetype, Elements(framedims));
+					else
+						MixedToDeviceTfloat(h_subframes[ss], d_subframetemp, (EM_DATATYPE)subframetype, Elements(framedims));
+					if (d_HasZeroRects(d_subframetemp, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframetemp, framedims, toInt3(20, 100, 1)))
+					{
+						*iscorrupt = true;
+						if (exclude.count(ss) == 0)
+							exclude.insert(ss);
+					}
+					d_AddVector(d_subframe, d_subframetemp, d_subframe, Elements(framedims));
+					cudaStreamQuery(0);
 				}
-				d_AddVector(d_subframe, d_subframetemp, d_subframe, Elements(framedims));
-				cudaStreamQuery(0);
+			}
+			else
+			{
+				if (subframeformat == "mrc")
+					MixedToDeviceTfloat(h_subframes[s], d_subframe, (MRC_DATATYPE)subframetype, Elements(framedims));
+				else
+					MixedToDeviceTfloat(h_subframes[s], d_subframe, (EM_DATATYPE)subframetype, Elements(framedims));
 			}
 
 			//Multiply by gain mask
@@ -228,7 +248,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				d_Xray(d_subframe, d_subframe, framedims);
 
 			//Scale, filter and save frame's FFT to host memory
-			d_Scale(d_subframe, d_subframedownsampled, framedims, downsampleddims, T_INTERP_MODE::T_INTERP_FOURIER, NULL, &scaleplanback);
+			d_Scale(d_subframe, d_subframedownsampled, framedims, downsampleddims, T_INTERP_MODE::T_INTERP_FOURIER, &scaleplanforw, &scaleplanback);
 			cudaStreamQuery(0);
 
 			//Neat version to avoid artifacts at the edges, since this involves highpass as well
@@ -285,16 +305,17 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 					d_ComplexMultiplyByConjVector(d_subframeFFT, d_inputFFT1, d_inputFFT1, ElementsFFT(downsampleddims));
 					d_IFFTC2R(d_inputFFT1, d_correlation, &corrplanback, downsampleddims);
-					d_RemapFullFFT2Full(d_correlation, d_correlationshifted, downsampleddims);
-					d_MultiplyByVector(d_correlationshifted, d_correlationmask, d_correlationshifted, Elements(downsampleddims));
-					d_Peak(d_correlationshifted, d_translation, d_peakvalue, downsampleddims, T_PEAK_MODE::T_PEAK_SUBFINE, NULL, NULL);
+
+					d_FFTFullCrop(d_correlation, d_correlation, downsampleddims, dimspeak);
+					d_RemapFullFFT2Full(d_correlation, d_correlation, dimspeak);
+					d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
 
 					cudaMemcpy(h_translation, d_translation, sizeof(tfloat3), cudaMemcpyDeviceToHost);
 
-					//d_Peak return a result where center equals zero shift, thus subtract center coords
-					relativetranslation = tfloat3(h_translation[0].x - (tfloat)(downsampleddims.x / 2),
-															h_translation[0].y - (tfloat)(downsampleddims.y / 2),
-															(tfloat)0);
+					//d_Peak returns a result where center equals zero shift, thus subtract center coords
+					relativetranslation = tfloat3(h_translation[0].x - (tfloat)(dimspeak.x / 2),
+												  h_translation[0].y - (tfloat)(dimspeak.y / 2),
+												  (tfloat)0);
 					h_translations[s1 * n_subframes + s2] = relativetranslation;
 					h_translations[s2 * n_subframes + s1] = tfloat3(-relativetranslation.x, -relativetranslation.y, (tfloat)0);
 				}
@@ -310,14 +331,15 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 							d_ComplexMultiplyByConjVector(d_quadFFTs[y * quadnum.x + x], d_inputFFT1, d_inputFFT1, ElementsFFT(downsampledquaddims));
 							d_IFFTC2R(d_inputFFT1, d_correlation, &corrquadplanback, downsampledquaddims);
-							d_RemapFullFFT2Full(d_correlation, d_correlationshifted, downsampledquaddims);
-							d_MultiplyByVector(d_correlationshifted, d_correlationquadmask, d_correlationshifted, Elements(downsampledquaddims));
-							d_Peak(d_correlationshifted, d_translation, d_peakvalue, downsampledquaddims, T_PEAK_MODE::T_PEAK_SUBFINE, NULL, NULL);
+
+							d_FFTFullCrop(d_correlation, d_correlation, downsampledquaddims, dimspeak);
+							d_RemapFullFFT2Full(d_correlation, d_correlation, dimspeak);
+							d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
 
 							cudaMemcpy(h_translation, d_translation, sizeof(tfloat3), cudaMemcpyDeviceToHost);
 
-							relativetranslation = tfloat3(h_translation[0].x - (tfloat)(downsampledquaddims.x / 2),
-														  h_translation[0].y - (tfloat)(downsampledquaddims.y / 2),
+							relativetranslation = tfloat3(h_translation[0].x - (tfloat)(dimspeak.x / 2),
+														  h_translation[0].y - (tfloat)(dimspeak.y / 2),
 														  (tfloat)0);
 							h_translations[(globalsubframeoffset + s1) * n_subframes + s2] = relativetranslation;
 							h_translations[(globalsubframeoffset + s2) * n_subframes + s1] = tfloat3(-relativetranslation.x, -relativetranslation.y, (tfloat)0);
@@ -326,14 +348,12 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		}
 
 		//Clean up cross-correlation resources
+		cufftDestroy(peakplanback);
+		cufftDestroy(peakplanforw);
 		cufftDestroy(corrquadplanback);
 		cufftDestroy(corrplanback);
 		cudaFree(d_inputFFT1);
-		cudaFree(d_quadcorrelationmask);
-		cudaFree(d_correlationquadmask);
-		cudaFree(d_correlationmask);
 		cudaFree(d_correlation);
-		cudaFree(d_correlationshifted);
 		cudaFree(d_translation);
 		cudaFree(d_peakvalue);
 		free(h_translation);
@@ -427,6 +447,43 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	int framesvalid = 0;
 	int alignto = outputfirstframe + (min(outputlastframe, n_subframes - 1) - outputfirstframe) / 2;
 
+	//In case the entire stack is written as well, create file handles, write headers
+	FILE** fileswholestack = (FILE**)malloc(numberoutputranges * sizeof(FILE*));
+	FILE** filesquadstack;
+	if (Elements(quadnum) > 0)
+		filesquadstack = (FILE**)malloc(numberoutputranges * Elements(quadnum) * sizeof(FILE*));
+	tfloat* h_outputstackbuffer;
+	if (outputstack)
+	{
+		for (int r = 0; r < numberoutputranges; r++)
+		{
+			string wholename = outputstackname;
+			if (numberoutputranges > 1)
+				wholename += ".f" + to_string(h_outputranges[r * 2]) + "-" + to_string(h_outputranges[r * 2 + 1]);
+			wholename += "_movie.mrcs";
+			fileswholestack[r] = fopen(wholename.c_str(), "wb");
+			HeaderMRC headerwhole;
+			headerwhole.dimensions = outputframedims;
+			headerwhole.dimensions.z = h_outputranges[r * 2 + 1] - h_outputranges[r * 2] + 1;
+			fwrite((char*)&headerwhole, sizeof(char), sizeof(HeaderMRC), fileswholestack[r]);
+
+			for (int y = 0; y < quadnum.y; y++)
+				for (int x = 0; x < quadnum.x; x++)
+				{
+					string quadname = outputstackname + "." + to_string(x + 1) + "-" + to_string(y + 1);
+					if (numberoutputranges > 1)
+						quadname += ".f" + to_string(h_outputranges[r * 2]) + "-" + to_string(h_outputranges[r * 2 + 1]);
+					quadname += "_movie.mrcs";
+					filesquadstack[r * Elements(quadnum) + y * quadnum.x + x] = fopen(quadname.c_str(), "wb");
+					HeaderMRC headerquad;
+					headerquad.dimensions = outputquaddims;
+					headerquad.dimensions.z = h_outputranges[r * 2 + 1] - h_outputranges[r * 2] + 1;
+					fwrite((char*)&headerquad, sizeof(char), sizeof(HeaderMRC), filesquadstack[r * Elements(quadnum) + y * quadnum.x + x]);
+				}
+		}
+		cudaMallocHost((void**)&h_outputstackbuffer, Elements(outputframedims) * sizeof(tfloat));
+	}
+
 	//Shift frames by previously computed values and add them to the final output
 	for(int n = max(firstframe, outputfirstframe); n <= min(n_subframes - 1, min(outputlastframe, n_subframes - 1)); n++)
 	{
@@ -481,7 +538,11 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			translationquads[q].y *= downsamplefactor;
 		}
 
-		MixedToDeviceTfloat(h_subframes[n], d_subframe, subframetype, Elements(framedims));
+		if (subframeformat == "mrc")
+			MixedToDeviceTfloat(h_subframes[n], d_subframe, (MRC_DATATYPE)subframetype, Elements(framedims));
+		else
+			MixedToDeviceTfloat(h_subframes[n], d_subframe, (EM_DATATYPE)subframetype, Elements(framedims));
+
 		if(correctgain)
 			d_MultiplyByVector(d_subframe, d_gainfactor, d_subframe, Elements(framedims));
 		if(correctxray)
@@ -511,14 +572,22 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 					if (outputdownsamplefactor > 1)
 						d_FFTCrop((tcomplex*)d_quad, (tcomplex*)d_quad, quaddims, outputquaddims);
 					d_IFFTC2R((tcomplex*)d_quad, d_quad, &planquadback);
+					tfloat normfactor = 1.0f / (tfloat)(outputquaddims.x * outputquaddims.y);
+					d_MultiplyByScalar(d_quad, d_quad, Elements(outputquaddims), normfactor);
 					
 					for (int r = 0; r < numberoutputranges; r++)
 					{
-						if(n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
+						if (n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
+						{
 							d_AddVector(d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(outputquaddims),
 										d_quad,
 										d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(outputquaddims),
 										Elements(outputquaddims));
+
+							cudaMemcpy(h_outputstackbuffer, d_quad, Elements(outputquaddims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+							FILE* f = filesquadstack[r * Elements(quadnum) + y * quadnum.x + x];
+							fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputquaddims) * sizeof(tfloat), f);
+						}
 					}
 				}
 
@@ -530,11 +599,19 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			if (outputdownsamplefactor > 1)
 				d_FFTCrop((tcomplex*)d_subframe, (tcomplex*)d_subframe, framedims, outputframedims);
 			d_IFFTC2R((tcomplex*)d_subframe, d_subframe, &planback);
+			tfloat normfactor = 1.0f / (tfloat)(framedims.x * framedims.y);
+			d_MultiplyByScalar(d_subframe, d_subframe, Elements(outputframedims), normfactor);
 
 			for (int r = 0; r < numberoutputranges; r++)
 			{
-				if(n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
+				if (n >= h_outputranges[r * 2] && n <= h_outputranges[r * 2 + 1])
+				{
 					d_AddVector(d_average + Elements(outputframedims) * r, d_subframe, d_average + Elements(outputframedims) * r, Elements(outputframedims));
+
+					cudaMemcpy(h_outputstackbuffer, d_subframe, Elements(outputframedims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+					FILE* f = fileswholestack[r];
+					fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputframedims) * sizeof(tfloat), f);
+				}
 			}
 		}
 
@@ -549,6 +626,20 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	cufftDestroy(planquadforw);
 	cufftDestroy(planquadback);
 	cudaFree(d_shiftintermediate);
+	if (outputstack)
+	{
+		for (int r = 0; r < numberoutputranges; r++)
+		{
+			fclose(fileswholestack[r]);
+			for (int y = 0; y < quadnum.y; y++)
+				for (int x = 0; x < quadnum.x; x++)
+					fclose(filesquadstack[r * Elements(quadnum) + y * quadnum.x + x]);
+		}
+		cudaFreeHost(h_outputstackbuffer);
+	}
+	free(fileswholestack);
+	if (Elements(quadnum) > 0)
+		free(filesquadstack);
 
 	//Make final corrections and write log file
 	{
@@ -559,11 +650,12 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		//In case outliers became more prominent after summation, get rid of them
 		for (int r = 0; r < numberoutputranges; r++)
 			if(correctxray)
-				d_Xray(d_average + Elements(framedims) * r, d_average + Elements(framedims) * r, framedims);
+				d_Xray(d_average + Elements(outputframedims) * r, d_average + Elements(outputframedims) * r, outputframedims);
 
 		//Get image statistics
-		d_Dev(d_average, d_stats, Elements(framedims), (char*)NULL);
+		d_Dev(d_average, d_stats, Elements(outputframedims), (char*)NULL);
 		cudaMemcpy(&h_stats, d_stats, sizeof(imgstats5), cudaMemcpyDeviceToHost);
+		cudaFree(d_stats);
 
 		logfile.open(logpath.c_str(), ios::out);
 

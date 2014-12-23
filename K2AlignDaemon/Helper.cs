@@ -77,6 +77,13 @@ namespace K2AlignDaemon
             Z = z;
         }
 
+        public int3(byte[] value)
+        {
+            X = BitConverter.ToInt32(value, 0);
+            Y = BitConverter.ToInt32(value, sizeof(float));
+            Z = BitConverter.ToInt32(value, 2 * sizeof(float));
+        }
+
         public ulong Elements()
         {
             return (ulong)X * (ulong)Y * (ulong)Z;
@@ -91,49 +98,181 @@ namespace K2AlignDaemon
         {
             return ((ulong)position.Z * (ulong)Y + (ulong)position.Y) * (ulong)X + (ulong)position.X;
         }
+
+        public static implicit operator byte[](int3 value)
+        {
+            byte[] Bytes = new byte[3 * sizeof(int)];
+            Array.Copy(BitConverter.GetBytes(value.X), 0, Bytes, 0, sizeof(int));
+            Array.Copy(BitConverter.GetBytes(value.Y), 0, Bytes, sizeof(int), sizeof(int));
+            Array.Copy(BitConverter.GetBytes(value.Z), 0, Bytes, 2 * sizeof(int), sizeof(int));
+
+            return Bytes;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct int2
+    {
+        public int X, Y;
+
+        public int2(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public int2(byte[] value)
+        {
+            X = BitConverter.ToInt32(value, 0);
+            Y = BitConverter.ToInt32(value, sizeof(float));
+        }
+
+        public ulong Elements()
+        {
+            return (ulong)X * (ulong)Y;
+        }
+
+        public uint ElementN(int2 position)
+        {
+            return (uint)position.Y * (uint)X + (uint)position.X;
+        }
+
+        public ulong ElementNLong(int2 position)
+        {
+            return (ulong)position.Y * (ulong)X + (ulong)position.X;
+        }
+
+        public static implicit operator byte[](int2 value)
+        {
+            byte[] Bytes = new byte[2 * sizeof(int)];
+            Array.Copy(BitConverter.GetBytes(value.X), 0, Bytes, 0, sizeof(int));
+            Array.Copy(BitConverter.GetBytes(value.Y), 0, Bytes, sizeof(int), sizeof(int));
+
+            return Bytes;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct float3
+    {
+        public float X, Y, Z;
+
+        public float3(float x, float y, float z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
+
+        public float3(byte[] value)
+        {
+            X = BitConverter.ToSingle(value, 0);
+            Y = BitConverter.ToSingle(value, sizeof(float));
+            Z = BitConverter.ToSingle(value, 2 * sizeof(float));
+        }
+
+        public static implicit operator byte[](float3 value)
+        {
+            byte[] Bytes = new byte[3 * sizeof(float)];
+            Array.Copy(BitConverter.GetBytes(value.X), 0, Bytes, 0, sizeof(float));
+            Array.Copy(BitConverter.GetBytes(value.Y), 0, Bytes, sizeof(int), sizeof(float));
+            Array.Copy(BitConverter.GetBytes(value.Z), 0, Bytes, 2 * sizeof(int), sizeof(float));
+
+            return Bytes;
+        }
     }
 
     public static class IOHelper
     {
-        public static int3 GetEMDimensions(string path)
+        public static int3 GetMapDimensions(string path)
         {
             int3 Dims = new int3(1, 1, 1);
+            FileInfo Info = new FileInfo(path);
 
             using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
             {
-                byte[] Buffer = Reader.ReadBytes(512);
-                unsafe
+                if (Info.Extension.ToLower() == ".mrc")
                 {
-                    fixed (byte* BufferPtr = Buffer)
-                    {
-                        Dims.X = ((int*)BufferPtr)[1];
-                        Dims.Y = ((int*)BufferPtr)[2];
-                        Dims.Z = ((int*)BufferPtr)[3];
-                    }
+                    HeaderMRC Header = new HeaderMRC(Reader);
+                    Dims = Header.Dimensions;
                 }
+                else if (Info.Extension.ToLower() == ".em")
+                {
+                    HeaderEM Header = new HeaderEM(Reader);
+                    Dims = Header.Dimensions;
+                }
+                else
+                    throw new Exception("File type not supported.");
             }
 
             return Dims;
         }
 
-        public static float[] ReadEMfloat(string path)
+        public static float[] ReadMapFloat(string path)
         {
-            int3 Dims = GetEMDimensions(path);
-            float[] Data = new float[Dims.Elements()];
+            MapHeader Header = MapHeader.ReadFromFile(path);
+            Type ValueType = Header.GetValueType();
+            float[] Data = new float[Header.Dimensions.Elements()];
+            byte[] Bytes = null;
 
             using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
             {
-                Reader.ReadBytes(512);
-                byte[] Buffer = Reader.ReadBytes((int)Data.Length * sizeof(float));
-                unsafe
+                if (ValueType == typeof(byte))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(byte));
+                else if (ValueType == typeof(short))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(short));
+                else if (ValueType == typeof(ushort))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(ushort));
+                else if (ValueType == typeof(int))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(int));
+                else if (ValueType == typeof(float))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(float));
+                else if (ValueType == typeof(double))
+                    Bytes = Reader.ReadBytes(Data.Length * sizeof(double));
+            }
+
+            unsafe
+            {
+                fixed(byte* BytesPtr = Bytes)
+                fixed(float* DataPtr = Data)
                 {
-                    fixed (byte* BufferPtr = Buffer)
-                    fixed (float* DataPtr = Data)
+                    float* DataP = DataPtr;
+
+                    if (ValueType == typeof(byte))
                     {
-                        float* BufferP = (float*)BufferPtr;
-                        float* DataP = DataPtr;
+                        byte* BytesP = BytesPtr;
                         for (int i = 0; i < Data.Length; i++)
-                            *DataP++ = *BufferP++;
+                            *DataP++ = (float)*BytesP++;
+                    }
+                    else if (ValueType == typeof(short))
+                    {
+                        short* BytesP = (short*)BytesPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = (float)*BytesP++;
+                    }
+                    else if (ValueType == typeof(ushort))
+                    {
+                        ushort* BytesP = (ushort*)BytesPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = (float)*BytesP++;
+                    }
+                    else if (ValueType == typeof(int))
+                    {
+                        int* BytesP = (int*)BytesPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = (float)*BytesP++;
+                    }
+                    else if (ValueType == typeof(float))
+                    {
+                        float* BytesP = (float*)BytesPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = *BytesP++;
+                    }
+                    else if (ValueType == typeof(double))
+                    {
+                        double* BytesP = (double*)BytesPtr;
+                        for (int i = 0; i < Data.Length; i++)
+                            *DataP++ = (float)*BytesP++;
                     }
                 }
             }
@@ -141,25 +280,77 @@ namespace K2AlignDaemon
             return Data;
         }
 
-        public static int3 GetMRCDimensions(string path)
+        public static void WriteMapFloat(string path, MapHeader header, float[] data)
         {
-            int3 Dims = new int3(1, 1, 1);
+            Type ValueType = header.GetValueType();
+            ulong Elements = header.Dimensions.Elements();
 
-            using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
+            using(BinaryWriter Writer = new BinaryWriter(File.Create(path)))
             {
-                byte[] Buffer = Reader.ReadBytes(512);
+                header.Write(Writer);
+                byte[] Bytes = null;
+
+                if (ValueType == typeof(byte))
+                    Bytes = new byte[Elements * sizeof(byte)];
+                else if (ValueType == typeof(short))
+                    Bytes = new byte[Elements * sizeof(short)];
+                else if (ValueType == typeof(ushort))
+                    Bytes = new byte[Elements * sizeof(ushort)];
+                else if (ValueType == typeof(int))
+                    Bytes = new byte[Elements * sizeof(int)];
+                else if (ValueType == typeof(float))
+                    Bytes = new byte[Elements * sizeof(float)];
+                else if (ValueType == typeof(double))
+                    Bytes = new byte[Elements * sizeof(double)];
+
                 unsafe
                 {
-                    fixed (byte* BufferPtr = Buffer)
+                    fixed(float* DataPtr = data)
+                    fixed(byte* BytesPtr = Bytes)
                     {
-                        Dims.X = ((int*)BufferPtr)[0];
-                        Dims.Y = ((int*)BufferPtr)[1];
-                        Dims.Z = ((int*)BufferPtr)[2];
+                        float* DataP = DataPtr;
+
+                        if (ValueType == typeof(byte))
+                        {
+                            byte* BytesP = BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = (byte)*DataP++;
+                        }
+                        else if (ValueType == typeof(short))
+                        {
+                            short* BytesP = (short*)BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = (short)*DataP++;
+                        }
+                        else if (ValueType == typeof(ushort))
+                        {
+                            ushort* BytesP = (ushort*)BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = (ushort)*DataP++;
+                        }
+                        else if (ValueType == typeof(int))
+                        {
+                            int* BytesP = (int*)BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = (int)*DataP++;
+                        }
+                        else if (ValueType == typeof(float))
+                        {
+                            float* BytesP = (float*)BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = *DataP++;
+                        }
+                        else if (ValueType == typeof(double))
+                        {
+                            double* BytesP = (double*)BytesPtr;
+                            for (ulong i = 0; i < Elements; i++)
+                                *BytesP++ = (double)*DataP++;
+                        }
                     }
                 }
-            }
 
-            return Dims;
+                Writer.Write(Bytes);
+            }
         }
     }
 }

@@ -99,6 +99,7 @@ namespace K2AlignDaemon
             Options.OutputDownsample = Properties.Settings.Default.OutputDownsample;
             Options.DeletePatterns = Properties.Settings.Default.DeletePatterns;
             Options.DeleteFolders = Properties.Settings.Default.DeleteFolders;
+            Options.OutputStack = Properties.Settings.Default.OutputStack;
 
             Log = new LogWriter("log.txt");
             Log.Write(string.Format("Session started by {0}", System.Security.Principal.WindowsIdentity.GetCurrent().Name));
@@ -162,6 +163,7 @@ namespace K2AlignDaemon
             Properties.Settings.Default.OutputDownsample = Options.OutputDownsample;
             Properties.Settings.Default.DeletePatterns = Options.DeletePatterns;
             Properties.Settings.Default.DeleteFolders = Options.DeleteFolders;
+            Properties.Settings.Default.OutputStack = Options.OutputStack;
 
             Properties.Settings.Default.Save();
             Log.Dispose();
@@ -207,7 +209,11 @@ namespace K2AlignDaemon
                     Mode = ProcessingModes.Folder;
                     ProgressIndicator.IsIndeterminate = false;
                     PanelDelete.Visibility = Visibility.Collapsed;
-                    this.Height = 730;
+                    this.Height = 770;
+                    if (!Options.ArchiveZip)
+                        this.Height -= 30;
+                    if (!Options.InFormatRaw)
+                        this.Height -= 20;
 
                     Log.Write("Doing folder mode in " + Dialog.SelectedPath);
                     break;
@@ -258,7 +264,11 @@ namespace K2AlignDaemon
                     Mode = ProcessingModes.Daemon;
                     ProgressIndicator.IsIndeterminate = true;
                     PanelDelete.Visibility = Visibility.Visible;
-                    this.Height = 800;
+                    this.Height = 830;
+                    if (!Options.ArchiveZip)
+                        this.Height -= 30;
+                    if (!Options.InFormatRaw)
+                        this.Height -= 20;
 
                     Log.Write("Doing on-the-fly mode in " + Dialog.SelectedPath);
                     break;
@@ -391,21 +401,25 @@ namespace K2AlignDaemon
         private void RadioArchiveZip_Checked(object sender, RoutedEventArgs e)
         {
             GridTransferPath.Visibility = Visibility.Visible;
+            this.Height += 30;
         }
 
         private void RadioArchiveZip_Unchecked(object sender, RoutedEventArgs e)
         {
             GridTransferPath.Visibility = Visibility.Collapsed;
+            this.Height -= 30;
         }
 
         private void RadioInFormatRaw_Checked(object sender, RoutedEventArgs e)
         {
             StackRawDims.Visibility = Visibility.Visible;
+            this.Height += 20;
         }
 
         private void RadioInFormatRaw_Unchecked(object sender, RoutedEventArgs e)
         {
             StackRawDims.Visibility = Visibility.Collapsed;
+            this.Height -= 20;
         }
 
         /// <summary>
@@ -486,7 +500,7 @@ namespace K2AlignDaemon
         private void ButtonGainpath_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.Forms.OpenFileDialog Dialog = new System.Windows.Forms.OpenFileDialog();
-            Dialog.Filter = "EM Files|*.em";
+            Dialog.Filter = "Image Files|*.em;*.mrc";
             Dialog.Multiselect = false;
             System.Windows.Forms.DialogResult Result = Dialog.ShowDialog();
 
@@ -547,8 +561,8 @@ namespace K2AlignDaemon
                     float[] GainMask = new float[1];
                     if(Options.CorrectGain)
                     {
-                        GainDims = IOHelper.GetEMDimensions(Options.GainPath);
-                        GainMask = IOHelper.ReadEMfloat(Options.GainPath);
+                        GainDims = IOHelper.GetMapDimensions(Options.GainPath);
+                        GainMask = IOHelper.ReadMapFloat(Options.GainPath);
                     }
 
                     //corrupt.txt is used to save file names and frame numbers when black squares are detected (K2 issue)
@@ -640,29 +654,14 @@ namespace K2AlignDaemon
                                     FileInfo RootInfo = new FileInfo(CombinedNames[0]);
                                     string NameRoot = RootInfo.Name.Substring(0, RootInfo.Name.IndexOf("_n0.raw"));
 
-                                    byte[] Header = new byte[512];
-                                    using (BinaryReader Reader = new BinaryReader(File.OpenRead("emdummy.em")))
-                                        Header = Reader.ReadBytes(Header.Length);
-
                                     //Combine all files in group into an EM stack.
                                     using (BinaryWriter Writer = new BinaryWriter(File.Create("temp\\" + NameRoot + ".em")))
                                     {
                                         //Write EM header.
-                                        byte[] LocalHeader = new byte[Header.Length];
-                                        Array.Copy(Header, LocalHeader, Header.Length);
-                                        unsafe
-                                        {
-                                            fixed (byte* LocalHeaderPtr = LocalHeader)
-                                            {
-                                                ((int*)LocalHeaderPtr)[1] = Options.RawWidth;
-                                                ((int*)LocalHeaderPtr)[2] = Options.RawHeight;
-                                                ((int*)LocalHeaderPtr)[3] = CombinedFilesNeeded * 7;
-
-                                                //Falcon II data come as 32 bit uint.
-                                                LocalHeaderPtr[3] = 4;
-                                            }
-                                        }
-                                        Writer.Write(LocalHeader);
+                                        HeaderEM Header = new HeaderEM();
+                                        Header.Dimensions = new int3(Options.RawWidth, Options.RawHeight, CombinedFilesNeeded * 7);
+                                        Header.Mode = EMDataType.Long;
+                                        Header.Write(Writer);
 
                                         //For each burst in group:
                                         foreach (string Filename in CombinedNames)
@@ -694,7 +693,7 @@ namespace K2AlignDaemon
                                                         using (BinaryReader Reader = new BinaryReader(File.OpenRead("temp\\" + FrameName)))
                                                         {
                                                             Reader.ReadBytes(49);
-                                                            byte[] Buffer = Reader.ReadBytes(Options.RawWidth * Options.RawHeight * sizeof(float));
+                                                            byte[] Buffer = Reader.ReadBytes(Options.RawWidth * Options.RawHeight * sizeof(int));
                                                             Writer.Write(Buffer);
                                                         }
                                                         Success = true;
@@ -795,10 +794,8 @@ namespace K2AlignDaemon
                                         continue;
                                     int3 FrameDims = new int3(1, 1, 1);
 
-                                    if (Options.InFormatMrc)
-                                        FrameDims = IOHelper.GetMRCDimensions(Info.FullName);
-                                    else if (Options.InFormatEm || FileExtension == "raw")
-                                        FrameDims = IOHelper.GetEMDimensions(Info.FullName);
+                                    if (Options.InFormatMrc || Options.InFormatEm || FileExtension == "raw")
+                                        FrameDims = IOHelper.GetMapDimensions(Info.FullName);
                                     else if (Options.InFormatRaw)
                                         FrameDims = new int3(Options.RawWidth, Options.RawHeight, Options.RawDepth);
 
@@ -832,8 +829,8 @@ namespace K2AlignDaemon
                                                    GainMask,
                                                    GainDims,
                                                    Options.CorrectXray,
-                                                   (float)Options.BandpassLow,
-                                                   (float)Options.BandpassHigh,
+                                                   (float)Options.BandpassLow / 2f,
+                                                   (float)Options.BandpassHigh / 2f,
                                                    FileExtension == "raw" ? "em" : FileExtension,
                                                    RawDataType,
                                                    Options.InFormatRaw ? FrameDims : new int3(1, 1, 1),
@@ -848,6 +845,8 @@ namespace K2AlignDaemon
                                                    Options.OutputDownsample,
                                                    new int3(Options.QuadSize, Options.QuadSize, 1),
                                                    new int3(Options.QuadsX, Options.QuadsY, 1),
+                                                   Options.OutputStack,
+                                                   Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length - 1),
                                                    IsCorrupt,
                                                    Options.OutputPath + Info.Name + ".log");
 
@@ -855,23 +854,22 @@ namespace K2AlignDaemon
                                     if (IsCorrupt[0])
                                         CorruptWriter.WriteLine(Info.Name);
 
-                                    //This code cannot write its own headers, but instead copies and modifies pre-supplied EM or MRC headers.
-                                    byte[] Header = new byte[1];
-                                    string HeaderPath = "";
+                                    //If input and output are same format, copy header from input and update dimensions.
+                                    //Otherwise create new header.
+                                    MapHeader Header = null;
                                     if (FileExtension == OutputFileExtension)
-                                        HeaderPath = Info.FullName;
-                                    else if (Options.OutFormatEm)
-                                        HeaderPath = "emdummy.em";
-                                    else if (Options.OutFormatMrc)
-                                        HeaderPath = "mrcdummy.mrc";
+                                        Header = MapHeader.ReadFromFile(Info.FullName);
+                                    else if (OutputFileExtension == "em")
+                                        Header = new HeaderEM();
+                                    else if (OutputFileExtension == "mrc")
+                                        Header = new HeaderMRC();
+                                    else
+                                        throw new Exception("Could not create header because format is not supported.");
 
-                                    using (BinaryReader Reader = new BinaryReader(File.OpenRead(HeaderPath)))
-                                    {
-                                        if (Options.OutFormatEm)
-                                            Header = Reader.ReadBytes(512);
-                                        else if (Options.OutFormatMrc)
-                                            Header = Reader.ReadBytes(1024);
-                                    }
+                                    if (Options.OutFormatMRC16bit)
+                                        Header.SetValueType(typeof(ushort));
+                                    else
+                                        Header.SetValueType(typeof(float));
 
                                     //If something was saved as local temporary copy, delete it.
                                     //Unless it still has to be zipped.
@@ -890,194 +888,97 @@ namespace K2AlignDaemon
                                         Info = new FileInfo(Filename);
                                     }
                                     
-                                    //This worked asynchronously once, but at some point started to crash. Speed is sufficient even without async.
-                                    //if (AsyncWriteTask != null)
-                                        //AsyncWriteTask.Wait();
-                                    //AsyncWriteTask = new Task(() =>
-                                        {
-                                            //Write the output of whole frame and quads.
+                                    //Asynchronously write averages to output folder.
+                                    if (AsyncWriteTask != null)
+                                        AsyncWriteTask.Wait();
+                                    AsyncWriteTask = new Task(() =>
+                                    {
+                                        //Write the output of whole frame and quads.
 
-                                            Log.Write("Writing results for " + Filename);
+                                        Log.Write("Writing results for " + Filename);
 
-                                            bool Success = false;
-                                            int FailCount = 0;
-                                            uint OutputAverageLength = (uint)SubframeDims.Elements() / (uint)(Options.OutputDownsample * Options.OutputDownsample);
-                                            uint OutputQuadAverageLength = (uint)Math.Max(1, Options.QuadSize * Options.QuadSize * Options.QuadsX * Options.QuadsY / (Options.OutputDownsample * Options.OutputDownsample));
-                                            
-                                            //Attempt to write, throw up after 50 fails.
-                                            while(!Success)
-                                                try
-                                                {
-                                                    //Each output frame range has its own output.
-                                                    for (int r = 0; r < Options.NumberOutputRanges; r++)
-                                                    {
-                                                        string RangeSuffix = Options.NumberOutputRanges == 1 ? "" : "f" + Options.OutputRangesArray[r].Start + "-" + Options.OutputRangesArray[r].End + ".";
+                                        bool Success = false;
+                                        int FailCount = 0;
+                                        uint OutputAverageLength = (uint)SubframeDims.Elements() / (uint)(Options.OutputDownsample * Options.OutputDownsample);
+                                        uint OutputQuadAverageLength = (uint)Math.Max(1, Options.QuadSize * Options.QuadSize * Options.QuadsX * Options.QuadsY / (Options.OutputDownsample * Options.OutputDownsample));
 
-                                                        //Write aligned whole frame.
-                                                        using (BinaryWriter Writer = new BinaryWriter(File.Create(Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length) + RangeSuffix + OutputFileExtension)))
-                                                        {
-                                                            byte[] Buffer = null;
-                                                            if(Options.OutFormatMrc && Options.OutFormatMRC16bit)
-                                                                Buffer = new byte[OutputAverageLength * sizeof(short)];
-                                                            else
-                                                                Buffer = new byte[OutputAverageLength * sizeof(float)];
-                                                            byte[] LocalHeader = new byte[Header.Length];
-                                                            Array.Copy(Header, LocalHeader, Header.Length);
-                                                            unsafe
-                                                            {
-                                                                fixed (byte* LocalHeaderPtr = LocalHeader)
-                                                                {
-                                                                    if (Options.OutFormatMrc)
-                                                                    {
-                                                                        ((int*)LocalHeaderPtr)[0] = FrameDims.X / Options.OutputDownsample;
-                                                                        ((int*)LocalHeaderPtr)[1] = FrameDims.Y / Options.OutputDownsample;
-                                                                        ((int*)LocalHeaderPtr)[2] = 1;
-                                                                        ((int*)LocalHeaderPtr)[3] = Options.OutFormatMRC32bit ? 2 : 1;
-                                                                    }
-                                                                    else if (Options.OutFormatEm)
-                                                                    {
-                                                                        LocalHeaderPtr[3] = (byte)5;
-                                                                        ((int*)LocalHeaderPtr)[1] = FrameDims.X / Options.OutputDownsample;
-                                                                        ((int*)LocalHeaderPtr)[2] = FrameDims.Y / Options.OutputDownsample;
-                                                                        ((int*)LocalHeaderPtr)[3] = 1;
-                                                                    }
-                                                                }
-                                                                //For EMBL guy who wanted uint16 output.
-                                                                if (Options.OutFormatMrc && Options.OutFormatMRC16bit)
-                                                                {
-                                                                    fixed (byte* BufferPtr = Buffer)
-                                                                    fixed (float* FramePtr = OutputAverage)
-                                                                    {
-                                                                        short* BufferP = (short*)BufferPtr;
-                                                                        float* FrameP = FramePtr + OutputAverageLength * r;
-                                                                        for (int i = 0; i < OutputAverageLength; i++)
-                                                                            *BufferP++ = (short)(*FrameP++ * 64f);
-                                                                    }
-                                                                }
-                                                                else
-                                                                {
-                                                                    fixed (byte* BufferPtr = Buffer)
-                                                                    fixed (float* FramePtr = OutputAverage)
-                                                                    {
-                                                                        float* BufferP = (float*)BufferPtr;
-                                                                        float* FrameP = FramePtr + OutputAverageLength * r;
-                                                                        for (int i = 0; i < OutputAverageLength; i++)
-                                                                            *BufferP++ = *FrameP++;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            Writer.Write(LocalHeader);
-                                                            Writer.Write(Buffer);
-                                                        }
-
-                                                        //Write each aligned quad.
-                                                        for (int y = 0; y < Options.QuadsY; y++)
-                                                            for (int x = 0; x < Options.QuadsX; x++)
-                                                            {
-                                                                int QuadLength = Options.QuadSize * Options.QuadSize / (Options.OutputDownsample * Options.OutputDownsample);
-                                                                using (BinaryWriter Writer = new BinaryWriter(File.Create(Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length) + (x + 1) + "-" + (y + 1) + "." + RangeSuffix + OutputFileExtension)))
-                                                                {
-                                                                    byte[] Buffer = null;
-                                                                    if (Options.OutFormatMrc && Options.OutFormatMRC16bit)
-                                                                        Buffer = new byte[QuadLength * sizeof(short)];
-                                                                    else
-                                                                        Buffer = new byte[QuadLength * sizeof(float)];
-
-                                                                    byte[] LocalHeader = new byte[Header.Length];
-                                                                    Array.Copy(Header, LocalHeader, Header.Length);
-                                                                    unsafe
-                                                                    {
-                                                                        fixed (byte* LocalHeaderPtr = LocalHeader)
-                                                                        {
-                                                                            if (Options.OutFormatMrc)
-                                                                            {
-                                                                                ((int*)LocalHeaderPtr)[0] = Options.QuadSize / Options.OutputDownsample;
-                                                                                ((int*)LocalHeaderPtr)[1] = Options.QuadSize / Options.OutputDownsample;
-                                                                                ((int*)LocalHeaderPtr)[2] = 1;
-                                                                                ((int*)LocalHeaderPtr)[3] = Options.OutFormatMRC32bit ? 2 : 1;
-                                                                            }
-                                                                            else if (Options.OutFormatEm)
-                                                                            {
-                                                                                LocalHeaderPtr[3] = (byte)5;
-                                                                                ((int*)LocalHeaderPtr)[1] = Options.QuadSize / Options.OutputDownsample;
-                                                                                ((int*)LocalHeaderPtr)[2] = Options.QuadSize / Options.OutputDownsample;
-                                                                                ((int*)LocalHeaderPtr)[3] = 1;
-                                                                            }
-                                                                        }
-                                                                        //For EMBL guy who wanted uint16 output.
-                                                                        if (Options.OutFormatMrc && Options.OutFormatMRC16bit)
-                                                                        {
-                                                                            fixed (byte* BufferPtr = Buffer)
-                                                                            fixed (float* FramePtr = OutputQuadAverages)
-                                                                            {
-                                                                                short* BufferP = (short*)BufferPtr;
-                                                                                float* FrameP = FramePtr + OutputQuadAverageLength * r + QuadLength * (y * Options.QuadsX + x);
-                                                                                for (int i = 0; i < QuadLength; i++)
-                                                                                    *BufferP++ = (short)(*FrameP++ * 64f);
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            fixed (byte* BufferPtr = Buffer)
-                                                                            fixed (float* FramePtr = OutputQuadAverages)
-                                                                            {
-                                                                                float* BufferP = (float*)BufferPtr;
-                                                                                float* FrameP = FramePtr + OutputQuadAverageLength * r + QuadLength * (y * Options.QuadsX + x);
-                                                                                for (int i = 0; i < QuadLength; i++)
-                                                                                    *BufferP++ = *FrameP++;
-                                                                            }
-                                                                        }
-                                                                    }
-
-                                                                    Writer.Write(LocalHeader);
-                                                                    Writer.Write(Buffer);
-                                                                }
-                                                            }
-                                                    }
-                                                    Success = true;
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Log.Write(ex);
-                                                    Thread.Sleep(2000);
-                                                    FailCount++;
-                                                    if (FailCount % 50 == 0)
-                                                    {
-                                                        string ErredPath = Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length);
-                                                        MessageBox.Show("Failed to write output to " + ErredPath + " after 50 attempts. Please fix the problem and press OK to continue.");
-                                                    }
-                                                }
-
-                                            Log.Write("Results written for " + Filename);
-
-                                            //Attempt to delete temp files on EPU machine, as specified by folder and name pattern.
+                                        //Attempt to write, throw up after 50 fails.
+                                        while (!Success)
                                             try
                                             {
-                                                string[] DeletePatterns = Options.DeletePatterns.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                                                string[] DeleteFolders = Options.DeleteFolders.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                                                if (DeletePatterns.Length != DeleteFolders.Length)
-                                                    return;
-
-                                                for (int i = 0; i < DeletePatterns.Length; i++)
+                                                //Each output frame range has its own output.
+                                                for (int r = 0; r < Options.NumberOutputRanges; r++)
                                                 {
-                                                    foreach (string Path in Directory.EnumerateFiles(DeleteFolders[i], DeletePatterns[i], SearchOption.AllDirectories))
-                                                        File.Delete(Path);
+                                                    string RangeSuffix = Options.NumberOutputRanges == 1 ? "" : "f" + Options.OutputRangesArray[r].Start + "-" + Options.OutputRangesArray[r].End + ".";
 
-                                                    Log.Write("Deleted files matching " + DeletePatterns[i]);
+                                                    Header.Dimensions = new int3(FrameDims.X / Options.OutputDownsample,
+                                                                                    FrameDims.Y / Options.OutputDownsample,
+                                                                                    1);
+                                                    float[] WholeBuffer = new float[Header.Dimensions.Elements()];
+                                                    Array.Copy(OutputAverage, WholeBuffer.Length * r, WholeBuffer, 0, WholeBuffer.Length);
+                                                    //Write aligned whole frame.
+                                                    IOHelper.WriteMapFloat(Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length) + RangeSuffix + OutputFileExtension,
+                                                                           Header,
+                                                                           WholeBuffer);
+
+                                                    //Write each aligned quad.
+                                                    for (int y = 0; y < Options.QuadsY; y++)
+                                                        for (int x = 0; x < Options.QuadsX; x++)
+                                                        {
+                                                            int QuadLength = Options.QuadSize * Options.QuadSize / (Options.OutputDownsample * Options.OutputDownsample);
+                                                            float[] Buffer = new float[QuadLength];
+                                                            Array.Copy(OutputQuadAverages, OutputQuadAverageLength * r + QuadLength * (y * Options.QuadsX + x), Buffer, 0, QuadLength);
+                                                            Header.Dimensions = new int3(Options.QuadSize / Options.OutputDownsample,
+                                                                                            Options.QuadSize / Options.OutputDownsample,
+                                                                                            1);
+
+                                                            IOHelper.WriteMapFloat(Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length) + (x + 1) + "-" + (y + 1) + "." + RangeSuffix + OutputFileExtension,
+                                                                                    Header,
+                                                                                    Buffer);
+                                                        }
                                                 }
+                                                Success = true;
                                             }
                                             catch (Exception ex)
                                             {
-                                                Log.Write(new Exception("Could not delete files matching pattern."));
                                                 Log.Write(ex);
+                                                Thread.Sleep(2000);
+                                                FailCount++;
+                                                if (FailCount % 50 == 0)
+                                                {
+                                                    string ErredPath = Options.OutputPath + Info.Name.Substring(0, Info.Name.Length - (FileExtension == "raw" ? "em" : FileExtension).Length);
+                                                    MessageBox.Show("Failed to write output to " + ErredPath + " after 50 attempts. Please fix the problem and press OK to continue.");
+                                                }
                                             }
-                                        }//);
-                                    //AsyncWriteTask.Start();
+
+                                        Log.Write("Results written for " + Filename);
+
+                                        //Attempt to delete temp files on EPU machine, as specified by folder and name pattern.
+                                        try
+                                        {
+                                            string[] DeletePatterns = Options.DeletePatterns.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            string[] DeleteFolders = Options.DeleteFolders.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (DeletePatterns.Length != DeleteFolders.Length)
+                                                return;
+
+                                            for (int i = 0; i < DeletePatterns.Length; i++)
+                                            {
+                                                foreach (string Path in Directory.EnumerateFiles(DeleteFolders[i], DeletePatterns[i], SearchOption.AllDirectories))
+                                                    File.Delete(Path);
+
+                                                Log.Write("Deleted files matching " + DeletePatterns[i]);
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Log.Write(new Exception("Could not delete files matching pattern."));
+                                            Log.Write(ex);
+                                        }
+                                    });
+                                    AsyncWriteTask.Start();
 
                                     if (AsyncArchiveTask != null)
                                         AsyncArchiveTask.Wait();
-
                                     //While the next frames are processed, archive this one in parallel, if needed.
                                     AsyncArchiveTask = new Task(() =>
                                         {
@@ -1139,11 +1040,6 @@ namespace K2AlignDaemon
                                                 catch { }
 
                                                 Log.Write("Deleted " + Filename + " (compressed copy saved to " + Options.ArchivePath + Info.Name + ".bz2)");
-                                            }
-
-                                            if (Options.ArchiveKeep)
-                                            {
-                                                //File.Move(Info.FullName, Options.ArchivePath + Info.Name);
                                             }
 
                                             //Tell GUI thread to update progess indicator.

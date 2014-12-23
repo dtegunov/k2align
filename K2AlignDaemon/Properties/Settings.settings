@@ -84,10 +84,10 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="BandpassLow" Type="System.Decimal" Scope="User">
-      <Value Profile="(Default)">0.001</Value>
+      <Value Profile="(Default)">0.002</Value>
     </Setting>
     <Setting Name="BandpassHigh" Type="System.Decimal" Scope="User">
-      <Value Profile="(Default)">0.063</Value>
+      <Value Profile="(Default)">0.125</Value>
     </Setting>
     <Setting Name="DeletePatterns" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
@@ -103,6 +103,9 @@
     </Setting>
     <Setting Name="OutFormatMRC32bit" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="OutputStack" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:m="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:s="clr-namespace:Sparta"
-        Title="K2 Alignment" Height="740" Width="400"
+        Title="K2 Alignment" Height="780" Width="400"
         UseLayoutRounding="True" ShowTitleBar="True" SnapsToDevicePixels="False" TitlebarHeight="30" FontSize="13">
     <Window.Resources>
         <ResourceDictionary>
@@ -178,7 +178,7 @@
                     <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=MaxDrift, Mode=TwoWay}" TextFormat="Discard sub-frames if drift is over {0} px." MinValue="0.1" MaxValue="1000" StepSize="0.1" UpdateTrigger="PropertyChanged" />
                     <StackPanel Height="5" />
                     <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=MinValidFrames, Mode=TwoWay}" TextFormat="Output should contain at least {0} sub-frames." MinValue="1" MaxValue="999" UpdateTrigger="PropertyChanged" />
-
+                    
                     <Label Content="Quadrants" FontSize="20" />
                     <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
                         <s:ValueSlider Value="{Binding Path=QuadsX, Mode=TwoWay}" TextFormat="Partition into {0} x " MinValue="0" MaxValue="16384" UpdateTrigger="PropertyChanged" />
@@ -188,6 +188,8 @@
 
                     <Label Content="Post-processing" FontSize="20" />
                     <s:ValueSlider Margin="5,0,0,0" Value="{Binding Path=OutputDownsample, Mode=TwoWay}" TextFormat="Downsample by a factor of {0}." MinValue="1" MaxValue="16384" />
+                    <StackPanel Height="5" />
+                    <CheckBox Margin="5,0,0,0" Content="Write entire stack as well (MRC only)." IsChecked="{Binding Path=OutputStack, Mode=TwoWay}" />
 
                     <StackPanel Name="PanelDelete" Orientation="Vertical" Visibility="Collapsed">
                         <Label Content="Get rid of" FontSize="20" />

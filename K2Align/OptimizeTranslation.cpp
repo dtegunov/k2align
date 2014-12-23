@@ -57,23 +57,6 @@ void OptimizeTranslation(tfloat3* h_translations,
 				translationerrors[s1 * n_subframes + s2] = currenterror;
 				errors.push_back(currenterror.x * currenterror.x + currenterror.y * currenterror.y);	//Take square of error
 
-				if(errors.back() > maxsigma && a % 10 == 0)
-				{
-					int valuescolumn = 0, valuesrow = 0;
-					for (int x = s1 + 1; x < n_subframes; x++)
-						if (considertranslation[s1 * n_subframes + x])
-							valuesrow++;
-					for(int y = 0; y < s2; y++)
-						if (considertranslation[y * n_subframes + s2])
-							valuescolumn++;
-
-					if (min(valuesrow, valuescolumn) > 1)
-					{
-						//considertranslation[s1 * n_subframes + s2] = false;
-						//continue;
-					}
-				}
-
 				for (int t = s1 + 1; t <= s2; t++)
 				{
 					corrections[t].x += correctxBy;

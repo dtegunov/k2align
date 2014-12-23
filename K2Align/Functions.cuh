@@ -43,5 +43,7 @@ extern "C" __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, 
 															 int outputdownsamplefactor,
 															 int3 quaddims,
 															 int3 quadnum,
+															 bool outputstack,
+															 char* c_outputstackname,
 															 bool* iscorrupt,
 															 char* c_logpath);

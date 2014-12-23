@@ -24,6 +24,8 @@ namespace K2AlignDaemon
                                             int outputdownsamplefactor,
                                             int3 quaddims,
                                             int3 quadnum,
+                                            bool outputstack,
+                                            [MarshalAs(UnmanagedType.AnsiBStr)] string outputstackname,
                                             bool[] iscorrupt,
                                             [MarshalAs(UnmanagedType.AnsiBStr)] string logpath);
     }

@@ -70,6 +70,7 @@
     <Compile Include="Converters.cs" />
     <Compile Include="DataBase.cs" />
     <Compile Include="GPU.cs" />
+    <Compile Include="Headers.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="LogWriter.cs" />
     <Compile Include="ProcessingOptions.cs" />
