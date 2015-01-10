@@ -184,7 +184,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		cufftHandle quadforw = d_FFTR2CGetPlan(2, downsampledquaddims);
 							
 		//Allocate resources for frame cross-correlation
-		int3 dimspeak = toInt3(max(32, 128 / downsamplefactor), max(32, 128 / downsamplefactor), 1);
 		tcomplex* d_inputFFT1;
 		cudaMalloc((void**)&d_inputFFT1, ElementsFFT(downsampleddims) * sizeof(tcomplex));
 		tfloat* d_correlation;
@@ -199,7 +198,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		cufftHandle corrquadplanback = d_IFFTC2RGetPlan(2, downsampledquaddims);
 		cufftHandle peakplanforw = -1;
 		cufftHandle peakplanback = -1;
-		d_PeakMakePlans(dimspeak, T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
 
 		int3 perquadshift = toInt3(quadnum.x > 0 ? downsampledquaddims.x - (downsampledquaddims.x * quadnum.x - downsampleddims.x) / (quadnum.x - 1) : 0,
 									quadnum.y > 0 ? downsampledquaddims.y - (downsampledquaddims.y * quadnum.y - downsampleddims.y) / (quadnum.y - 1) : 0,
@@ -212,7 +210,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 					
 			//Moving window average
-			if (averageextent >= 0)
+			if (averageextent > 0)
 			{
 				d_ValueFill(d_subframe, Elements(framedims), (tfloat)0);
 				for (int ss = max(s - averageextent, 0); ss <= min(s + averageextent, n_subframes - 1); ss++)
@@ -298,6 +296,8 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 			for(int s1 = firstframe; s1 < s2 - adjacentgap; s1++)
 			{
 				tfloat3 relativetranslation((tfloat)0);
+				int maxshift = 6 * abs(s2 - s1) / downsamplefactor;
+				int3 dimspeak = toInt3(max(16, maxshift * 2), max(16, maxshift * 2), 1);
 
 				if(dowholeframe)
 				{
@@ -308,7 +308,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 					d_FFTFullCrop(d_correlation, d_correlation, downsampleddims, dimspeak);
 					d_RemapFullFFT2Full(d_correlation, d_correlation, dimspeak);
-					d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
+					d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, NULL, NULL);
 
 					cudaMemcpy(h_translation, d_translation, sizeof(tfloat3), cudaMemcpyDeviceToHost);
 
@@ -334,7 +334,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 
 							d_FFTFullCrop(d_correlation, d_correlation, downsampledquaddims, dimspeak);
 							d_RemapFullFFT2Full(d_correlation, d_correlation, dimspeak);
-							d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, &peakplanforw, &peakplanback);
+							d_Peak(d_correlation, d_translation, d_peakvalue, dimspeak, T_PEAK_MODE::T_PEAK_SUBFINE, NULL, NULL);
 
 							cudaMemcpy(h_translation, d_translation, sizeof(tfloat3), cudaMemcpyDeviceToHost);
 
@@ -348,8 +348,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		}
 
 		//Clean up cross-correlation resources
-		cufftDestroy(peakplanback);
-		cufftDestroy(peakplanforw);
 		cufftDestroy(corrquadplanback);
 		cufftDestroy(corrplanback);
 		cudaFree(d_inputFFT1);

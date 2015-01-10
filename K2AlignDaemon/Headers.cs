@@ -22,13 +22,22 @@ namespace K2AlignDaemon
 
             using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
             {
-                if (Info.Extension.ToLower() == ".mrc")
-                    Header = new HeaderMRC(Reader);
-                else if (Info.Extension.ToLower() == ".em")
-                    Header = new HeaderEM(Reader);
-                else
-                    throw new Exception("File type not supported.");
+                Header = ReadFromFile(Reader, Info);
             }
+
+            return Header;
+        }
+
+        public static MapHeader ReadFromFile(BinaryReader reader, FileInfo info)
+        {
+            MapHeader Header = null;
+
+            if (info.Extension.ToLower() == ".mrc")
+                Header = new HeaderMRC(reader);
+            else if (info.Extension.ToLower() == ".em")
+                Header = new HeaderEM(reader);
+            else
+                throw new Exception("File type not supported.");
 
             return Header;
         }

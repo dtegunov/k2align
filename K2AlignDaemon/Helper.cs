@@ -210,26 +210,31 @@ namespace K2AlignDaemon
 
         public static float[] ReadMapFloat(string path)
         {
-            MapHeader Header = MapHeader.ReadFromFile(path);
-            Type ValueType = Header.GetValueType();
-            float[] Data = new float[Header.Dimensions.Elements()];
+            MapHeader Header = null;
+            Type ValueType = null;
             byte[] Bytes = null;
+            FileInfo Info = new FileInfo(path);
 
             using (BinaryReader Reader = new BinaryReader(File.OpenRead(path)))
             {
+                Header = MapHeader.ReadFromFile(Reader, Info);
+                ValueType = Header.GetValueType();
+
                 if (ValueType == typeof(byte))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(byte));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(byte));
                 else if (ValueType == typeof(short))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(short));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(short));
                 else if (ValueType == typeof(ushort))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(ushort));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(ushort));
                 else if (ValueType == typeof(int))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(int));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(int));
                 else if (ValueType == typeof(float))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(float));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(float));
                 else if (ValueType == typeof(double))
-                    Bytes = Reader.ReadBytes(Data.Length * sizeof(double));
+                    Bytes = Reader.ReadBytes((int)Header.Dimensions.Elements() * sizeof(double));
             }
+
+            float[] Data = new float[Header.Dimensions.Elements()];
 
             unsafe
             {
