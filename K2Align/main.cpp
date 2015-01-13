@@ -226,7 +226,6 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 							exclude.insert(ss);
 					}
 					d_AddVector(d_subframe, d_subframetemp, d_subframe, Elements(framedims));
-					cudaStreamQuery(0);
 				}
 			}
 			else
@@ -235,6 +234,13 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 					MixedToDeviceTfloat(h_subframes[s], d_subframe, (MRC_DATATYPE)subframetype, Elements(framedims));
 				else
 					MixedToDeviceTfloat(h_subframes[s], d_subframe, (EM_DATATYPE)subframetype, Elements(framedims));
+
+				if (d_HasZeroRects(d_subframe, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframe, framedims, toInt3(20, 100, 1)))
+				{
+					*iscorrupt = true;
+					if (exclude.count(s) == 0)
+						exclude.insert(s);
+				}
 			}
 
 			//Multiply by gain mask

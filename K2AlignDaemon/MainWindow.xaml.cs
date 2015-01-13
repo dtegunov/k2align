@@ -805,7 +805,7 @@ namespace K2AlignDaemon
                                     {
                                         ulong BytesIfChar = FrameDims.Elements();
                                         if (Info.Length == (long)BytesIfChar * 4)
-                                            RawDataType = 4;
+                                            RawDataType = 5;
                                         else if (Info.Length < (long)BytesIfChar)
                                         {
                                             ProcessedFiles.Add(Info.FullName);
