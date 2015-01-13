@@ -14,6 +14,9 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
+K2AlignDaemon/bin
+K2Align/x64
+K2AlignDaemon/obj
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -45,6 +48,9 @@ build/
 *.pidb
 *.log
 *.scc
+*.bin
+*.asv
+*.mexw64
 
 # Visual C++ cache files
 ipch/
@@ -154,3 +160,30 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+*.dll
+*.exp
+*.lib
+*.exe
+*.cache
+log.txt
+K2AlignDaemon/obj/Release/App.g.cs
+K2AlignDaemon/obj/Release/App.g.i.cs
+*.cache
+K2AlignDaemon/obj/Release/EditableTextBlock.g.cs
+K2AlignDaemon/obj/Release/EditableTextBlock.g.i.cs
+K2AlignDaemon/obj/Release/FormattedTextBlock.g.cs
+K2AlignDaemon/obj/Release/FormattedTextBlock.g.i.cs
+K2AlignDaemon/obj/Release/GeneratedInternalTypeHelper.g.cs
+K2AlignDaemon/obj/Release/GeneratedInternalTypeHelper.g.i.cs
+K2AlignDaemon/obj/Release/K2AlignDaemon.csproj.FileListAbsolute.txt
+*.exe
+*.pdb
+*.lref
+K2AlignDaemon/obj/Release/MainWindow.g.cs
+K2AlignDaemon/obj/Release/MainWindow.g.i.cs
+K2AlignDaemon/obj/Release/ValueSlider.g.i.cs
+K2AlignDaemon/K2AlignDaemon.vshost.exe.manifest
+K2AlignDaemon/K2AlignDaemon.vshost.exe.config
+K2AlignDaemon.vshost.exe.manifest
+K2AlignDaemon.vshost.exe.config
+K2AlignDaemon/obj/Release/EditableTextBlock.g.cs

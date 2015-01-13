@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:m="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:s="clr-namespace:Sparta"
-        Title="K2 Alignment" Height="780" Width="400"
+        Title="K2 Alignment" Height="820" Width="400"
         UseLayoutRounding="True" ShowTitleBar="True" SnapsToDevicePixels="False" TitlebarHeight="30" FontSize="13">
     <Window.Resources>
         <ResourceDictionary>
@@ -143,7 +143,9 @@
                     <StackPanel Height="5" />
                     <CheckBox Margin="5,0,0,0" Content="Correct outlier pixels" IsChecked="{Binding Path=CorrectXray, Mode=TwoWay}" />
                     <StackPanel Height="5" />
-                    <StackPanel Orientation="Horizontal">
+                    <CheckBox Margin="5,0,0,0" Content="Discard frames with black squares" IsChecked="{Binding Path=LookForBlackSquares, Mode=TwoWay}" />
+                    <StackPanel Height="5" />
+                    <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
                         <s:ValueSlider Value="{Binding Path=BandpassLow, Mode=TwoWay}" TextFormat="Band-pass between {0} " MinValue="0" MaxValue="0.25" StepSize="0.001" />
                         <s:ValueSlider Value="{Binding Path=BandpassHigh, Mode=TwoWay}" TextFormat="and {0} of Nyquist frequency." MinValue="0" MaxValue="0.25" StepSize="0.001" />
                     </StackPanel>

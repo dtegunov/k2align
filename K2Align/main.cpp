@@ -8,7 +8,7 @@ namespace po = boost::program_options;
 
 __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_outputwhole, tfloat* h_outputquads, 
 												 bool correctgain, tfloat* h_gainfactor, int3 gainfactordims,
-												 bool correctxray, 
+												 bool correctxray, bool lookforblacksquares,
 												 float bandpasslow, float bandpasshigh,
 												 char* c_subframeformat, int rawdatatype,
 												 int3 rawdims, 
@@ -219,7 +219,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 						MixedToDeviceTfloat(h_subframes[ss], d_subframetemp, (MRC_DATATYPE)subframetype, Elements(framedims));
 					else
 						MixedToDeviceTfloat(h_subframes[ss], d_subframetemp, (EM_DATATYPE)subframetype, Elements(framedims));
-					if (d_HasZeroRects(d_subframetemp, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframetemp, framedims, toInt3(20, 100, 1)))
+					if (lookforblacksquares && (d_HasZeroRects(d_subframetemp, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframetemp, framedims, toInt3(20, 100, 1))))
 					{
 						*iscorrupt = true;
 						if (exclude.count(ss) == 0)
@@ -235,7 +235,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				else
 					MixedToDeviceTfloat(h_subframes[s], d_subframe, (EM_DATATYPE)subframetype, Elements(framedims));
 
-				if (d_HasZeroRects(d_subframe, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframe, framedims, toInt3(20, 100, 1)))
+				if (lookforblacksquares && (d_HasZeroRects(d_subframe, framedims, toInt3(100, 20, 1)) || d_HasZeroRects(d_subframe, framedims, toInt3(20, 100, 1))))
 				{
 					*iscorrupt = true;
 					if (exclude.count(s) == 0)
@@ -491,7 +491,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 	//Shift frames by previously computed values and add them to the final output
 	for(int n = max(firstframe, outputfirstframe); n <= min(n_subframes - 1, min(outputlastframe, n_subframes - 1)); n++)
 	{
-		if(exclude.count(n) > 0)
+		if (lookforblacksquares && exclude.count(n) > 0)
 			continue;
 
 		tfloat drift = max(abs(subframetranslations[n].x), abs(subframetranslations[n].y));
@@ -664,7 +664,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 		logfile.open(logpath.c_str(), ios::out);
 
 		logfile << "Aligned image stats:\n";
-		logfile << "Subframes:\t" << framesvalid << "\n";
+		logfile << "Subframes:\t" << framesvalid << ", sliding window of " << (1 + averageextent * 2) << "\n";
 		logfile << "Average:\t" << h_stats.mean << "\n";
 		logfile << "StdDev:\t" << h_stats.stddev << "\n";
 		logfile << "Mean squared alignment error:\t" << errorstddev[0] * downsamplefactor << "\n";

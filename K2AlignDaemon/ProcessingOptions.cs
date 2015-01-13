@@ -175,6 +175,13 @@ namespace K2AlignDaemon
             set { if (value != _CorrectXray) { _CorrectXray = value; OnPropertyChanged(); } }
         }
 
+        private bool _LookForBlackSquares = true;
+        public bool LookForBlackSquares
+        {
+            get { return _LookForBlackSquares; }
+            set { if (value != _LookForBlackSquares) { _LookForBlackSquares = value; OnPropertyChanged(); } }
+        }
+
         private decimal _BandpassLow = 0.001M;
         public decimal BandpassLow
         {

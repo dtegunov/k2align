@@ -83,6 +83,7 @@ namespace K2AlignDaemon
             Options.CorrectGain = Properties.Settings.Default.CorrectGain;
             Options.GainPath = Properties.Settings.Default.GainPath;
             Options.CorrectXray = Properties.Settings.Default.CorrectXray;
+            Options.LookForBlackSquares = Properties.Settings.Default.LookForBlackSquares;
             Options.BandpassLow = Properties.Settings.Default.BandpassLow;
             Options.BandpassHigh = Properties.Settings.Default.BandpassHigh;
             Options.ProcessFirst = Properties.Settings.Default.ProcessFirst;
@@ -147,6 +148,7 @@ namespace K2AlignDaemon
             Properties.Settings.Default.CorrectGain = Options.CorrectGain;
             Properties.Settings.Default.GainPath = Options.GainPath;
             Properties.Settings.Default.CorrectXray = Options.CorrectXray;
+            Properties.Settings.Default.LookForBlackSquares = Options.LookForBlackSquares;
             Properties.Settings.Default.BandpassLow = Options.BandpassLow;
             Properties.Settings.Default.BandpassHigh = Options.BandpassHigh;
             Properties.Settings.Default.ProcessFirst = Options.ProcessFirst;
@@ -209,7 +211,7 @@ namespace K2AlignDaemon
                     Mode = ProcessingModes.Folder;
                     ProgressIndicator.IsIndeterminate = false;
                     PanelDelete.Visibility = Visibility.Collapsed;
-                    this.Height = 770;
+                    this.Height = 800;
                     if (!Options.ArchiveZip)
                         this.Height -= 30;
                     if (!Options.InFormatRaw)
@@ -264,7 +266,7 @@ namespace K2AlignDaemon
                     Mode = ProcessingModes.Daemon;
                     ProgressIndicator.IsIndeterminate = true;
                     PanelDelete.Visibility = Visibility.Visible;
-                    this.Height = 830;
+                    this.Height = 860;
                     if (!Options.ArchiveZip)
                         this.Height -= 30;
                     if (!Options.InFormatRaw)
@@ -823,12 +825,11 @@ namespace K2AlignDaemon
 
                                     //Finally, align!
                                     GPU.FrameAlign(Info.FullName,
-                                                   OutputAverage,
-                                                   OutputQuadAverages,
+                                                   OutputAverage, OutputQuadAverages,
                                                    Options.CorrectGain,
                                                    GainMask,
                                                    GainDims,
-                                                   Options.CorrectXray,
+                                                   Options.CorrectXray, Options.LookForBlackSquares,
                                                    (float)Options.BandpassLow / 2f,
                                                    (float)Options.BandpassHigh / 2f,
                                                    FileExtension == "raw" ? "em" : FileExtension,

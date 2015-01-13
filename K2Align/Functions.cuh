@@ -30,7 +30,7 @@ tfloat StdDev(vector<tfloat> h_input);
 
 extern "C" __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_outputwhole, tfloat* h_outputquads, 
 															 bool correctgain, tfloat* h_gainfactor, int3 gainfactordims,
-															 bool correctxray, 
+															 bool correctxray, bool lookforblacksquares, 
 															 float bandpasslow,
 															 float bandpasshigh,
 															 char* c_subframeformat, int rawdatatype,

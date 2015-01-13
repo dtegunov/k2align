@@ -12,7 +12,7 @@ namespace K2AlignDaemon
         [DllImport("K2Align.dll", CharSet = CharSet.Ansi, SetLastError = true, CallingConvention = CallingConvention.StdCall, EntryPoint = "h_FrameAlign")]
         public static extern void FrameAlign([MarshalAs(UnmanagedType.AnsiBStr)] string imagepath, float[] h_outputwhole, float[] h_outputquads,
                                             bool correctgain, float[] h_gainfactor, int3 gainfactordims,
-                                            bool correctxray,
+                                            bool correctxray, bool lookforblacksquares,
                                             float bandpasslow, float bandpasshigh,
                                             [MarshalAs(UnmanagedType.AnsiBStr)] string subframeformat, int rawdatatype,
                                             int3 rawdims,
