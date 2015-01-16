@@ -588,9 +588,12 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 										d_quadaverages + Elements(outputquaddims) * Elements(quadnum) * r + (y * quadnum.x + x) * Elements(outputquaddims),
 										Elements(outputquaddims));
 
-							cudaMemcpy(h_outputstackbuffer, d_quad, Elements(outputquaddims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
-							FILE* f = filesquadstack[r * Elements(quadnum) + y * quadnum.x + x];
-							fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputquaddims) * sizeof(tfloat), f);
+							if (outputstack)
+							{
+								cudaMemcpy(h_outputstackbuffer, d_quad, Elements(outputquaddims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+								FILE* f = filesquadstack[r * Elements(quadnum) + y * quadnum.x + x];
+								fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputquaddims) * sizeof(tfloat), f);
+							}
 						}
 					}
 				}
@@ -612,9 +615,12 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				{
 					d_AddVector(d_average + Elements(outputframedims) * r, d_subframe, d_average + Elements(outputframedims) * r, Elements(outputframedims));
 
-					cudaMemcpy(h_outputstackbuffer, d_subframe, Elements(outputframedims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
-					FILE* f = fileswholestack[r];
-					fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputframedims) * sizeof(tfloat), f);
+					if (outputstack)
+					{
+						cudaMemcpy(h_outputstackbuffer, d_subframe, Elements(outputframedims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+						FILE* f = fileswholestack[r];
+						fwrite(h_outputstackbuffer, sizeof(char), Elements(outputframedims) * sizeof(tfloat), f);
+					}
 				}
 			}
 		}
