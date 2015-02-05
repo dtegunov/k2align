@@ -485,7 +485,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 					fwrite((char*)&headerquad, sizeof(char), sizeof(HeaderMRC), filesquadstack[r * Elements(quadnum) + y * quadnum.x + x]);
 				}
 		}
-		cudaMallocHost((void**)&h_outputstackbuffer, Elements(outputframedims) * sizeof(tfloat));
+		h_outputstackbuffer = (tfloat*)malloc(Elements(outputframedims) * sizeof(tfloat));
 	}
 
 	//Shift frames by previously computed values and add them to the final output
@@ -591,8 +591,10 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 							if (outputstack)
 							{
 								cudaMemcpy(h_outputstackbuffer, d_quad, Elements(outputquaddims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+								cudaDeviceSynchronize();
 								FILE* f = filesquadstack[r * Elements(quadnum) + y * quadnum.x + x];
 								fwrite((char*)h_outputstackbuffer, sizeof(char), Elements(outputquaddims) * sizeof(tfloat), f);
+								fflush(f);
 							}
 						}
 					}
@@ -618,8 +620,10 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 					if (outputstack)
 					{
 						cudaMemcpy(h_outputstackbuffer, d_subframe, Elements(outputframedims) * sizeof(tfloat), cudaMemcpyDeviceToHost);
+						cudaDeviceSynchronize();
 						FILE* f = fileswholestack[r];
 						fwrite(h_outputstackbuffer, sizeof(char), Elements(outputframedims) * sizeof(tfloat), f);
+						fflush(f);
 					}
 				}
 			}
@@ -645,7 +649,7 @@ __declspec(dllexport) void __stdcall h_FrameAlign(char* c_imagepath, tfloat* h_o
 				for (int x = 0; x < quadnum.x; x++)
 					fclose(filesquadstack[r * Elements(quadnum) + y * quadnum.x + x]);
 		}
-		cudaFreeHost(h_outputstackbuffer);
+		free(h_outputstackbuffer);
 	}
 	free(fileswholestack);
 	if (Elements(quadnum) > 0)
