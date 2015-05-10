@@ -187,3 +187,4 @@ K2AlignDaemon/K2AlignDaemon.vshost.exe.config
 K2AlignDaemon.vshost.exe.manifest
 K2AlignDaemon.vshost.exe.config
 K2AlignDaemon/obj/Release/EditableTextBlock.g.cs
+*.suo
